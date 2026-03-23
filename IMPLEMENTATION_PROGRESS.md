@@ -74,6 +74,9 @@
 - Problem: HolmesGPT end-to-end validation needed proof that it reads from the new Qdrant collections created by the new normalizer.
 - Resolution: run `python3 /kb-scripts/kb_tools.py search 'security findings' 5 spoke-a` inside the live Holmes pod and confirm results from the new `raw/kubescape/...` and `raw/popeye/...` objects.
 
+- Problem: `k8sgpt` data did not appear in S3 because the exporter init container used `bitnami/kubectl:1.30`, and that tag does not exist on Docker Hub.
+- Resolution: switch the exporter to `bitnami/kubectl:latest`, push revision `f1a9e36`, wait for ArgoCD to reconcile, and verify a successful upload to `s3://sre-rag/raw/k8sgpt/hub/20260323T185208Z/results.json`.
+
 ### Next Steps
 - Treat the new architecture as operational for test use.
 - Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.
