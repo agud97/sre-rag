@@ -18,9 +18,8 @@ spec:
               emptyDir: {}
           initContainers:
             - name: kubescape
-              image: quay.io/kubescape/kubescape:v3.0.31
-              command:
-                - kubescape
+              image: quay.io/kubescape/kubescape-cli:v3.0.48
+              args:
                 - scan
                 - framework
                 - nsa

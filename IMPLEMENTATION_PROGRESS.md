@@ -37,10 +37,10 @@
 - Resolution: disable pruning for `holmesgpt-configs` so ArgoCD does not delete legacy runbook ConfigMaps required by the live HolmesGPT deployment.
 
 - Problem: `kubescape/kubescape:latest` on Docker Hub does not exist, causing `ErrImagePull` in the exporter validation job.
-- Resolution: switch exporter image to pinned `quay.io/kubescape/kubescape:v3.0.31`, which resolves successfully.
+- Resolution: align with the known-good manifest from `idp-app-v1` and switch to `quay.io/kubescape/kubescape-cli:v3.0.48`.
 
-- Problem: the pinned Kubescape image does not contain `/bin/sh`, so the original shell-based init command fails with `StartError`.
-- Resolution: switch the init container to a direct `kubescape scan framework nsa` command.
+- Problem: the non-CLI Kubescape image layout does not expose a runnable shell/CLI path for the init container.
+- Resolution: reuse the working `kubescape-cli` image and argument structure from the existing hub manifests.
 
 - Problem: the corporate S3 endpoint presents a certificate chain that is not trusted by the default CA bundle in local and containerized clients.
 - Resolution: add `S3_VERIFY_SSL=false`, disable TLS verification in AWS CLI uploads, and configure boto3 clients to honor the same setting.
