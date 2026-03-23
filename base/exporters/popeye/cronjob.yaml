@@ -56,7 +56,8 @@ spec:
                   ts=$(date -u +"%Y%m%dT%H%M%SZ")
                   aws s3 cp /shared/report.json \
                     "s3://${S3_BUCKET}/raw/popeye/${CLUSTER_ID}/${ts}/report.json" \
-                    --endpoint-url "${S3_ENDPOINT}"
+                    --endpoint-url "${S3_ENDPOINT}" \
+                    --no-verify-ssl
               volumeMounts:
                 - name: shared
                   mountPath: /shared

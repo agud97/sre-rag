@@ -24,6 +24,7 @@ data:
     S3_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL", "")
     S3_REGION = os.environ.get("S3_REGION", "us-east-1")
     S3_BUCKET = os.environ.get("S3_BUCKET", "sre-rag")
+    S3_VERIFY_SSL = os.environ.get("S3_VERIFY_SSL", "false").lower() == "true"
     QDRANT_ENDPOINT = os.environ.get("QDRANT_ENDPOINT", "http://qdrant.qdrant.svc.cluster.local:6333").rstrip("/")
     EMBEDDING_ENDPOINT = os.environ.get("EMBEDDING_ENDPOINT", "http://embedding-svc.sre-system.svc:7997").rstrip("/")
 
@@ -31,6 +32,7 @@ data:
       kwargs = {"region_name": S3_REGION}
       if S3_ENDPOINT:
         kwargs["endpoint_url"] = S3_ENDPOINT
+      kwargs["verify"] = S3_VERIFY_SSL
       return boto3.client("s3", **kwargs)
 
     def http_json(method, url, payload=None):
@@ -86,6 +88,7 @@ data:
   S3_ENDPOINT: "https://s3.regru.cloud"
   S3_BUCKET: "sre-rag"
   S3_REGION: "us-east-1"
+  S3_VERIFY_SSL: "false"
   QDRANT_ENDPOINT: "http://qdrant.qdrant.svc.cluster.local:6333"
   EMBEDDING_ENDPOINT: "http://embedding-svc.sre-system.svc:7997"
 ---

@@ -8,5 +8,6 @@ data:
   S3_ENDPOINT: "https://s3.regru.cloud"
   S3_BUCKET: "sre-rag"
   S3_REGION: "us-east-1"
+  S3_VERIFY_SSL: "false"
   QDRANT_ENDPOINT: "http://qdrant.qdrant.svc.cluster.local:6333"
   EMBEDDING_ENDPOINT: "http://embedding-svc.sre-system.svc:7997"

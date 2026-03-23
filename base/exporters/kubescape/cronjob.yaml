@@ -20,14 +20,14 @@ spec:
             - name: kubescape
               image: quay.io/kubescape/kubescape:v3.0.31
               command:
-                - /bin/sh
-                - -c
-                - |
-                  set -eu
-                  if kubescape scan framework nsa --format json --output /shared/findings.json; then
-                    exit 0
-                  fi
-                  printf '{"error":"kubescape scan failed","tool":"kubescape"}\n' > /shared/findings.json
+                - kubescape
+                - scan
+                - framework
+                - nsa
+                - --format
+                - json
+                - --output
+                - /shared/findings.json
               volumeMounts:
                 - name: shared
                   mountPath: /shared
@@ -56,7 +56,8 @@ spec:
                   ts=$(date -u +"%Y%m%dT%H%M%SZ")
                   aws s3 cp /shared/findings.json \
                     "s3://${S3_BUCKET}/raw/kubescape/${CLUSTER_ID}/${ts}/findings.json" \
-                    --endpoint-url "${S3_ENDPOINT}"
+                    --endpoint-url "${S3_ENDPOINT}" \
+                    --no-verify-ssl
               volumeMounts:
                 - name: shared
                   mountPath: /shared

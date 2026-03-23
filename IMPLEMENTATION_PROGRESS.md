@@ -39,5 +39,11 @@
 - Problem: `kubescape/kubescape:latest` on Docker Hub does not exist, causing `ErrImagePull` in the exporter validation job.
 - Resolution: switch exporter image to pinned `quay.io/kubescape/kubescape:v3.0.31`, which resolves successfully.
 
+- Problem: the pinned Kubescape image does not contain `/bin/sh`, so the original shell-based init command fails with `StartError`.
+- Resolution: switch the init container to a direct `kubescape scan framework nsa` command.
+
+- Problem: the corporate S3 endpoint presents a certificate chain that is not trusted by the default CA bundle in local and containerized clients.
+- Resolution: add `S3_VERIFY_SSL=false`, disable TLS verification in AWS CLI uploads, and configure boto3 clients to honor the same setting.
+
 ### Next Steps
 - Optional next execution step is cluster deployment and runtime verification.

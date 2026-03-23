@@ -33,6 +33,11 @@ spec:
               configMapKeyRef:
                 name: sre-rag-config
                 key: S3_REGION
+          - name: S3_VERIFY_SSL
+            valueFrom:
+              configMapKeyRef:
+                name: sre-rag-config
+                key: S3_VERIFY_SSL
           - name: QDRANT_ENDPOINT
             valueFrom:
               configMapKeyRef:

@@ -56,7 +56,8 @@ spec:
                   ts=$(date -u +"%Y%m%dT%H%M%SZ")
                   aws s3 cp /shared/results.json \
                     "s3://${S3_BUCKET}/raw/k8sgpt/${CLUSTER_ID}/${ts}/results.json" \
-                    --endpoint-url "${S3_ENDPOINT}"
+                    --endpoint-url "${S3_ENDPOINT}" \
+                    --no-verify-ssl
               volumeMounts:
                 - name: shared
                   mountPath: /shared

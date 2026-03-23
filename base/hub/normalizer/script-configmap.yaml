@@ -16,6 +16,7 @@ data:
     S3_ENDPOINT = os.environ.get("S3_ENDPOINT", "")
     S3_REGION = os.environ.get("S3_REGION", "us-east-1")
     S3_BUCKET = os.environ["S3_BUCKET"]
+    S3_VERIFY_SSL = os.environ.get("S3_VERIFY_SSL", "false").lower() == "true"
     EMBEDDING_ENDPOINT = os.environ["EMBEDDING_ENDPOINT"].rstrip("/")
     QDRANT_ENDPOINT = os.environ["QDRANT_ENDPOINT"].rstrip("/")
 
@@ -23,6 +24,7 @@ data:
       kwargs = {"region_name": S3_REGION}
       if S3_ENDPOINT:
         kwargs["endpoint_url"] = S3_ENDPOINT
+      kwargs["verify"] = S3_VERIFY_SSL
       return boto3.client("s3", **kwargs)
 
     def http_json(method, url, payload=None):
