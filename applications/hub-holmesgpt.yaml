@@ -105,6 +105,10 @@ spec:
           limits:
             memory: "4096Mi"
             cpu: "2000m"
+        tolerations:
+          - key: node.cilium.io/agent-not-ready
+            operator: Exists
+            effect: NoSchedule
   destination:
     server: https://kubernetes.default.svc
     namespace: holmesgpt

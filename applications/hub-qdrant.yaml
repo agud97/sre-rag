@@ -12,6 +12,10 @@ spec:
     helm:
       values: |
         replicaCount: 1
+        tolerations:
+          - key: node.cilium.io/agent-not-ready
+            operator: Exists
+            effect: NoSchedule
         persistence:
           size: 5Gi
           storageClassName: openebs-hostpath

@@ -66,6 +66,10 @@ spec:
       labels:
         app: embedding-svc
     spec:
+      tolerations:
+        - key: node.cilium.io/agent-not-ready
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: server
           image: python:3.11-slim

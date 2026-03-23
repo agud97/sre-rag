@@ -59,6 +59,9 @@
   1. `normalizer` job cannot schedule because all Hub nodes currently carry `NoSchedule` taints (`node.kubernetes.io/unreachable` or `node.kubernetes.io/disk-pressure`).
   2. `holmesgpt` rollout is still `Progressing` because the cluster is under memory pressure during rolling update.
 
+- Problem: after the controller recovered, new Hub pods still could not schedule onto the only otherwise usable node because it carries `node.cilium.io/agent-not-ready:NoSchedule`.
+- Resolution: add a targeted toleration for `node.cilium.io/agent-not-ready` to the new Hub components (`embedding-svc`, `normalizer`, `qdrant`, `holmesgpt`). `disk-pressure` taints are intentionally not tolerated.
+
 ### Next Steps
 - Restore schedulable capacity on the Hub cluster or tolerate the active taints if that is operationally acceptable.
 - Re-run `test-norm` and Qdrant validation after Hub nodes become schedulable.
