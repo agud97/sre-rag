@@ -1,0 +1,111 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: holmesgpt
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://robusta-charts.storage.googleapis.com
+    chart: holmes
+    targetRevision: "0.19.0"
+    helm:
+      values: |
+        additionalEnvVars:
+          - name: MODEL
+            value: "openai/qwen3-coder-30b-a3b-instruct-mlx"
+          - name: OPENAI_API_BASE
+            value: "http://llm-proxy.llm-proxy.svc.cluster.local:8080/v1"
+          - name: OPENAI_API_KEY
+            value: "not-needed"
+          - name: AWS_ENDPOINT_URL
+            valueFrom:
+              configMapKeyRef:
+                name: sre-rag-config
+                key: S3_ENDPOINT
+          - name: S3_BUCKET
+            valueFrom:
+              configMapKeyRef:
+                name: sre-rag-config
+                key: S3_BUCKET
+          - name: S3_REGION
+            valueFrom:
+              configMapKeyRef:
+                name: sre-rag-config
+                key: S3_REGION
+          - name: QDRANT_ENDPOINT
+            valueFrom:
+              configMapKeyRef:
+                name: sre-rag-config
+                key: QDRANT_ENDPOINT
+          - name: EMBEDDING_ENDPOINT
+            valueFrom:
+              configMapKeyRef:
+                name: sre-rag-config
+                key: EMBEDDING_ENDPOINT
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: s3-credentials-normalizer
+                key: accessKeyId
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: s3-credentials-normalizer
+                key: secretAccessKey
+        toolsets:
+          kubernetes/core:
+            enabled: true
+          kubernetes/logs:
+            enabled: true
+          prometheus/metrics:
+            enabled: true
+            config:
+              prometheus_url: "http://vmsingle-vm-k8s-stack-victoria-metrics-k8s-stack.monitoring.svc:8429"
+          runbook:
+            enabled: true
+          bash:
+            enabled: true
+            config:
+              include_default_allow_deny_list: true
+          kb/stack:
+            enabled: true
+        additionalVolumes:
+          - name: custom-runbooks
+            configMap:
+              name: custom-runbooks
+          - name: sre-runbooks
+            configMap:
+              name: sre-runbooks
+          - name: kb-stack-toolset
+            configMap:
+              name: kb-stack-toolset
+        additionalVolumeMounts:
+          - name: custom-runbooks
+            mountPath: /app/holmes/plugins/runbooks/custom-runbooks.yaml
+            subPath: custom-runbooks.yaml
+          - name: sre-runbooks
+            mountPath: /app/holmes/plugins/runbooks/sre-runbooks.yaml
+            subPath: sre-runbooks.yaml
+          - name: kb-stack-toolset
+            mountPath: /app/holmes/plugins/toolsets/kb-stack-toolset.yaml
+            subPath: kb-stack-toolset.yaml
+          - name: kb-stack-toolset
+            mountPath: /kb-scripts/kb_tools.py
+            subPath: kb_tools.py
+        resources:
+          requests:
+            memory: "2048Mi"
+            cpu: "500m"
+          limits:
+            memory: "4096Mi"
+            cpu: "2000m"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: holmesgpt
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

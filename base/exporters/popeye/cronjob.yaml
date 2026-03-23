@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: popeye-exporter
+  namespace: sre-exporters
+spec:
+  schedule: "23 * * * *"
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: popeye-exporter
+          restartPolicy: Never
+          volumes:
+            - name: shared
+              emptyDir: {}
+          initContainers:
+            - name: popeye
+              image: derailed/popeye:v0.22.1
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  if popeye -A -o json > /shared/report.json 2>/shared/popeye.stderr; then
+                    exit 0
+                  fi
+                  printf '{"error":"popeye scan failed","tool":"popeye"}\n' > /shared/report.json
+              volumeMounts:
+                - name: shared
+                  mountPath: /shared
+          containers:
+            - name: uploader
+              image: amazon/aws-cli:2.15.40
+              envFrom:
+                - configMapRef:
+                    name: sre-rag-config
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials
+                      key: accessKeyId
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials
+                      key: secretAccessKey
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  ts=$(date -u +"%Y%m%dT%H%M%SZ")
+                  aws s3 cp /shared/report.json \
+                    "s3://${S3_BUCKET}/raw/popeye/${CLUSTER_ID}/${ts}/report.json" \
+                    --endpoint-url "${S3_ENDPOINT}"
+              volumeMounts:
+                - name: shared
+                  mountPath: /shared

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sre-rag-config
+  namespace: sre-system
+data:
+  CLUSTER_ID: "hub"
+  S3_ENDPOINT: "https://s3.regru.cloud"
+  S3_BUCKET: "sre-rag"
+  S3_REGION: "us-east-1"
+  QDRANT_ENDPOINT: "http://qdrant.qdrant.svc.cluster.local:6333"
+  EMBEDDING_ENDPOINT: "http://embedding-svc.sre-system.svc:7997"

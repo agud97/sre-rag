@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kb-stack-toolset
+  namespace: holmesgpt
+data:
+  kb-stack-toolset.yaml: |
+    name: kb/stack
+    tools:
+      - name: kb_search
+        description: Search normalized SRE knowledge base documents in Qdrant
+        command: ["python3", "/kb-scripts/kb_tools.py", "search"]
+      - name: kb_fetch
+        description: Fetch a raw or normalized object from S3 by key
+        command: ["python3", "/kb-scripts/kb_tools.py", "fetch"]
+  kb_tools.py: |
+    import json
+    import os
+    import sys
+    import urllib.request
+
+    import boto3
+
+    S3_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL", "")
+    S3_REGION = os.environ.get("S3_REGION", "us-east-1")
+    S3_BUCKET = os.environ.get("S3_BUCKET", "sre-rag")
+    QDRANT_ENDPOINT = os.environ.get("QDRANT_ENDPOINT", "http://qdrant.qdrant.svc.cluster.local:6333").rstrip("/")
+    EMBEDDING_ENDPOINT = os.environ.get("EMBEDDING_ENDPOINT", "http://embedding-svc.sre-system.svc:7997").rstrip("/")
+
+    def s3_client():
+      kwargs = {"region_name": S3_REGION}
+      if S3_ENDPOINT:
+        kwargs["endpoint_url"] = S3_ENDPOINT
+      return boto3.client("s3", **kwargs)
+
+    def http_json(method, url, payload=None):
+      data = None if payload is None else json.dumps(payload).encode("utf-8")
+      req = urllib.request.Request(url, data=data, method=method)
+      req.add_header("Content-Type", "application/json")
+      with urllib.request.urlopen(req, timeout=120) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+    def embed(query):
+      payload = http_json("POST", f"{EMBEDDING_ENDPOINT}/embed", {"texts": [query]})
+      return payload["vectors"][0]
+
+    def search(query, limit=5, cluster_id=""):
+      vector = embed(query)
+      collection = f"kb_docs_{cluster_id}" if cluster_id else "kb_docs_hub"
+      payload = {
+        "vector": vector,
+        "limit": int(limit),
+        "with_payload": True,
+      }
+      result = http_json("POST", f"{QDRANT_ENDPOINT}/collections/{collection}/points/search", payload)
+      for item in result.get("result", []):
+        doc = item.get("payload", {})
+        print(f"[score={item.get('score', 0):.3f}] tool={doc.get('tool')} ts={doc.get('timestamp')} key={doc.get('source_key')}")
+
+    def fetch(path):
+      body = s3_client().get_object(Bucket=S3_BUCKET, Key=path)["Body"].read()
+      sys.stdout.write(body.decode("utf-8", "replace"))
+
+    def main():
+      cmd = sys.argv[1]
+      if cmd == "search":
+        query = sys.argv[2]
+        limit = sys.argv[3] if len(sys.argv) > 3 else 5
+        cluster_id = sys.argv[4] if len(sys.argv) > 4 else ""
+        search(query, limit, cluster_id)
+        return
+      if cmd == "fetch":
+        fetch(sys.argv[2])
+        return
+      raise SystemExit(f"unknown command: {cmd}")
+
+    if __name__ == "__main__":
+      main()
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sre-rag-config
+  namespace: holmesgpt
+data:
+  S3_ENDPOINT: "https://s3.regru.cloud"
+  S3_BUCKET: "sre-rag"
+  S3_REGION: "us-east-1"
+  QDRANT_ENDPOINT: "http://qdrant.qdrant.svc.cluster.local:6333"
+  EMBEDDING_ENDPOINT: "http://embedding-svc.sre-system.svc:7997"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s3-credentials-normalizer
+  namespace: holmesgpt
+type: Opaque
+data: {}

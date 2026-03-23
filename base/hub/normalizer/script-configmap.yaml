@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: normalizer-script
+  namespace: sre-system
+data:
+  normalize.py: |
+    import json
+    import os
+    import time
+    import urllib.request
+    from collections import defaultdict
+
+    import boto3
+
+    S3_ENDPOINT = os.environ.get("S3_ENDPOINT", "")
+    S3_REGION = os.environ.get("S3_REGION", "us-east-1")
+    S3_BUCKET = os.environ["S3_BUCKET"]
+    EMBEDDING_ENDPOINT = os.environ["EMBEDDING_ENDPOINT"].rstrip("/")
+    QDRANT_ENDPOINT = os.environ["QDRANT_ENDPOINT"].rstrip("/")
+
+    def s3_client():
+      kwargs = {"region_name": S3_REGION}
+      if S3_ENDPOINT:
+        kwargs["endpoint_url"] = S3_ENDPOINT
+      return boto3.client("s3", **kwargs)
+
+    def http_json(method, url, payload=None):
+      data = None if payload is None else json.dumps(payload).encode("utf-8")
+      req = urllib.request.Request(url, data=data, method=method)
+      req.add_header("Content-Type", "application/json")
+      with urllib.request.urlopen(req, timeout=120) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+    def list_raw_objects(client):
+      paginator = client.get_paginator("list_objects_v2")
+      for page in paginator.paginate(Bucket=S3_BUCKET, Prefix="raw/"):
+        for obj in page.get("Contents", []):
+          key = obj["Key"]
+          if key.endswith("/"):
+            continue
+          yield key
+
+    def parse_key(key):
+      parts = key.split("/")
+      if len(parts) < 5:
+        return None
+      return {
+        "tool": parts[1],
+        "cluster_id": parts[2],
+        "timestamp": parts[3],
+        "filename": parts[4],
+      }
+
+    def load_json(client, key):
+      body = client.get_object(Bucket=S3_BUCKET, Key=key)["Body"].read()
+      try:
+        return json.loads(body)
+      except Exception:
+        return {"raw_text": body.decode("utf-8", "replace")}
+
+    def doc_text(tool, cluster_id, timestamp, payload):
+      return json.dumps(
+        {
+          "tool": tool,
+          "cluster_id": cluster_id,
+          "timestamp": timestamp,
+          "payload": payload,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+      )
+
+    def docs_from_object(key, payload):
+      meta = parse_key(key)
+      if not meta:
+        return []
+      text = doc_text(meta["tool"], meta["cluster_id"], meta["timestamp"], payload)
+      return [{
+        "id": f'{meta["cluster_id"]}:{meta["tool"]}:{meta["timestamp"]}',
+        "cluster_id": meta["cluster_id"],
+        "tool": meta["tool"],
+        "timestamp": meta["timestamp"],
+        "source_key": key,
+        "text": text,
+      }]
+
+    def embed_texts(texts):
+      data = http_json("POST", f"{EMBEDDING_ENDPOINT}/embed", {"texts": texts})
+      return data["vectors"]
+
+    def ensure_collection(cluster_id, vector_size):
+      name = f"kb_docs_{cluster_id}"
+      payload = {
+        "vectors": {
+          "size": vector_size,
+          "distance": "Cosine",
+        }
+      }
+      try:
+        http_json("PUT", f"{QDRANT_ENDPOINT}/collections/{name}", payload)
+      except Exception:
+        pass
+      return name
+
+    def upsert_points(collection, docs, vectors):
+      points = []
+      for idx, (doc, vector) in enumerate(zip(docs, vectors), start=1):
+        points.append({
+          "id": abs(hash(doc["id"])) % (10 ** 12) + idx,
+          "vector": vector,
+          "payload": doc,
+        })
+      http_json("PUT", f"{QDRANT_ENDPOINT}/collections/{collection}/points?wait=true", {"points": points})
+
+    def write_docs_jsonl(client, cluster_id, timestamp, docs):
+      lines = "\n".join(json.dumps(doc, ensure_ascii=False) for doc in docs) + "\n"
+      key = f"normalized/docs/{cluster_id}/{timestamp}/docs.jsonl"
+      client.put_object(Bucket=S3_BUCKET, Key=key, Body=lines.encode("utf-8"), ContentType="application/x-ndjson")
+      return key
+
+    def main():
+      client = s3_client()
+      grouped = defaultdict(list)
+      for key in list_raw_objects(client):
+        meta = parse_key(key)
+        if not meta:
+          continue
+        grouped[meta["cluster_id"]].append(key)
+
+      for cluster_id, keys in grouped.items():
+        docs = []
+        for key in sorted(keys):
+          payload = load_json(client, key)
+          docs.extend(docs_from_object(key, payload))
+        if not docs:
+          continue
+        vectors = embed_texts([doc["text"] for doc in docs])
+        collection = ensure_collection(cluster_id, len(vectors[0]))
+        upsert_points(collection, docs, vectors)
+        normalized_key = write_docs_jsonl(client, cluster_id, time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()), docs)
+        print(f"Loaded {len(docs)} docs from {cluster_id}")
+        print(f"Upserted {len(docs)} docs to {collection}")
+        print(f"Wrote {normalized_key}")
+
+    if __name__ == "__main__":
+      main()

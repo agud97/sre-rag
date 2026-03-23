@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: holmesgpt-configs
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/agud97/sre-rag.git
+    targetRevision: HEAD
+    path: base/hub/holmesgpt-toolset
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: holmesgpt
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: s3-credentials-normalizer
+      jsonPointers: [/data, /stringData]

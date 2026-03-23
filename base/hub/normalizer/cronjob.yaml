@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: normalizer
+  namespace: sre-system
+spec:
+  schedule: "41 * * * *"
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: normalizer
+              image: python:3.11-slim
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  pip install --no-cache-dir boto3 >/tmp/pip.log 2>&1
+                  python /app/normalize.py
+              envFrom:
+                - configMapRef:
+                    name: sre-rag-config
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials-normalizer
+                      key: accessKeyId
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-credentials-normalizer
+                      key: secretAccessKey
+              volumeMounts:
+                - name: script
+                  mountPath: /app
+          volumes:
+            - name: script
+              configMap:
+                name: normalizer-script

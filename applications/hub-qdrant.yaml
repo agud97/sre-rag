@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: qdrant
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://qdrant.github.io/qdrant-helm
+    chart: qdrant
+    targetRevision: "0.10.1"
+    helm:
+      values: |
+        replicaCount: 1
+        persistence:
+          size: 5Gi
+          storageClassName: openebs-hostpath
+        service:
+          type: ClusterIP
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qdrant
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
