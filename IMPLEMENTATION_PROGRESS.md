@@ -7,6 +7,9 @@
 - Repository initially contained only `PLAN.md`, `README.md`, and `local/s3.env`.
 - Base manifests, overlays, and ArgoCD applications are now created.
 - Structural validation via `kubectl kustomize` passes for hub, spoke-a, and holmesgpt configs.
+- GitHub delivery is configured and multiple rollout commits were pushed to `origin/main`.
+- SpokeA applications `k8sgpt`, `spoke-a-k8sgpt-scanner`, and `spoke-a-sre-rag` are `Synced/Healthy`.
+- Manual spoke validation succeeded for `kubescape` exporter up to confirmed S3 object creation.
 
 ### Decisions Applied
 - One shared S3 credential set is used for exporters, normalizer, and HolmesGPT.
@@ -15,7 +18,7 @@
 - `kubevious` is excluded from the current implementation to remove scope ambiguity.
 
 ### Current Work
-- Final repository cleanup and documentation alignment.
+- Deployment validation and documenting remaining infrastructure blockers on Hub.
 
 ### Problems And Resolutions
 - Problem: `PLAN.md` described cross-namespace reuse of `sre-rag-config`, which is not valid in Kubernetes.
@@ -45,5 +48,18 @@
 - Problem: the corporate S3 endpoint presents a certificate chain that is not trusted by the default CA bundle in local and containerized clients.
 - Resolution: add `S3_VERIFY_SSL=false`, disable TLS verification in AWS CLI uploads, and configure boto3 clients to honor the same setting.
 
+- Problem: the original reconstructed Kubescape image/entrypoint did not match the working production setup.
+- Resolution: align `sre-rag` with the known-good manifest from `/root/proj/cross/idp-app-v1` and use `quay.io/kubescape/kubescape-cli:v3.0.48`.
+
+- Problem: Hub ArgoCD controller was stuck because `argocd-application-controller-0` had been terminating for more than five days.
+- Resolution: force-delete the stale pod so the StatefulSet could recreate a healthy controller and resume reconciliation.
+
+- Problem: full Hub end-to-end validation is currently blocked by cluster health, not by application manifests.
+- Resolution: identified two external blockers:
+  1. `normalizer` job cannot schedule because all Hub nodes currently carry `NoSchedule` taints (`node.kubernetes.io/unreachable` or `node.kubernetes.io/disk-pressure`).
+  2. `holmesgpt` rollout is still `Progressing` because the cluster is under memory pressure during rolling update.
+
 ### Next Steps
-- Optional next execution step is cluster deployment and runtime verification.
+- Restore schedulable capacity on the Hub cluster or tolerate the active taints if that is operationally acceptable.
+- Re-run `test-norm` and Qdrant validation after Hub nodes become schedulable.
+- Finish HolmesGPT rollout after resource pressure on Hub is resolved.
