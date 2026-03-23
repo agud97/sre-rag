@@ -5,6 +5,7 @@ metadata:
   namespace: sre-system
 data:
   normalize.py: |
+    import hashlib
     import json
     import os
     import time
@@ -107,9 +108,10 @@ data:
 
     def upsert_points(collection, docs, vectors):
       points = []
-      for idx, (doc, vector) in enumerate(zip(docs, vectors), start=1):
+      for doc, vector in zip(docs, vectors):
+        point_id = int.from_bytes(hashlib.sha256(doc["id"].encode("utf-8")).digest()[:8], "big") % (10 ** 12)
         points.append({
-          "id": abs(hash(doc["id"])) % (10 ** 12) + idx,
+          "id": point_id,
           "vector": vector,
           "payload": doc,
         })
