@@ -1,0 +1,144 @@
+# Technical Implementation
+
+## High-Level Architecture
+
+The implementation is split into three layers:
+
+1. Spoke and hub exporters
+- run in namespace `sre-exporters`
+- collect raw findings
+- upload raw JSON artifacts to cloud S3 under `raw/<tool>/<cluster_id>/<timestamp>/...`
+
+2. Hub normalization layer
+- runs in namespace `sre-system`
+- reads all raw artifacts from S3
+- turns them into normalized documents
+- creates or updates one Qdrant collection per cluster: `kb_docs_<cluster_id>`
+- writes normalized snapshots to `normalized/docs/<cluster_id>/<timestamp>/docs.jsonl`
+
+3. HolmesGPT integration
+- runs in namespace `holmesgpt`
+- uses `kb_tools.py`
+- queries Qdrant collections and returns `tool`, `timestamp`, and `source_key`
+
+## Repository Structure
+
+- `applications/`
+  ArgoCD `Application` manifests for hub and spoke rollouts.
+
+- `base/exporters/`
+  Shared exporter manifests, namespace, RBAC, and secret stubs.
+
+- `base/hub/`
+  Hub-side embedding service, normalizer, and HolmesGPT toolset config.
+
+- `base/k8sgpt-scanner/`
+  Shared `k8sgpt` scanner manifest used by spoke overlays.
+
+- `overlays/hub/`
+  Hub-specific `ConfigMap` values for exporters and system components.
+
+- `overlays/spoke-a/`
+  Spoke A config with `CLUSTER_ID=spoke-a`.
+
+- `overlays/spoke-b/`
+  Template for the next spoke cluster.
+
+## Exporters
+
+### Kubescape
+
+Files:
+- `base/exporters/kubescape/cronjob.yaml`
+
+Behavior:
+- init container runs `kubescape`
+- uploader container uses `amazon/aws-cli`
+- writes to `raw/kubescape/${CLUSTER_ID}/${timestamp}/findings.json`
+
+### Popeye
+
+Files:
+- `base/exporters/popeye/cronjob.yaml`
+
+Behavior:
+- init container runs `popeye`
+- output is extracted to JSON
+- uploader container writes to `raw/popeye/${CLUSTER_ID}/${timestamp}/report.json`
+
+### K8sGPT
+
+Files:
+- `base/exporters/k8sgpt/cronjob.yaml`
+- `base/exporters/k8sgpt/rbac.yaml`
+- `base/k8sgpt-scanner/scanner.yaml`
+
+Behavior:
+- init container runs `kubectl get results.core.k8sgpt.ai -A -o json`
+- uploader container writes to `raw/k8sgpt/${CLUSTER_ID}/${timestamp}/results.json`
+
+## Hub Components
+
+### Embedding Service
+
+Files:
+- `base/hub/embedding-svc/embedding-svc.yaml`
+
+Role:
+- provides the vector embedding endpoint used by the normalizer
+
+### Normalizer
+
+Files:
+- `base/hub/normalizer/cronjob.yaml`
+- `base/hub/normalizer/script-configmap.yaml`
+
+Role:
+- scans `raw/` objects in S3
+- parses the key shape `raw/<tool>/<cluster_id>/<timestamp>/<filename>`
+- creates document payloads
+- embeds them
+- writes to `kb_docs_<cluster_id>` in Qdrant
+- saves normalized snapshots in S3
+
+Important implementation detail:
+- `cluster_id` is derived from the S3 object key, not from the hub cluster runtime
+
+### HolmesGPT Toolset
+
+Files:
+- `base/hub/holmesgpt-toolset/kb-stack-toolset.yaml`
+- `base/hub/holmesgpt-toolset/custom-runbooks-configmap.yaml`
+- `base/hub/holmesgpt-toolset/sre-runbooks.yaml`
+
+Role:
+- provides `kb_tools.py`
+- `search(query, limit, cluster_id)` targets `kb_docs_<cluster_id>`
+- if no `cluster_id` is provided, the current default is `kb_docs_hub`
+
+## ArgoCD Applications
+
+Hub:
+- `applications/hub-sre-rag.yaml`
+- `applications/hub-qdrant.yaml`
+- `applications/hub-holmesgpt.yaml`
+- `applications/hub-holmesgpt-configs.yaml`
+
+Spoke:
+- `applications/spoke-a-k8sgpt.yaml`
+- `applications/spoke-a-k8sgpt-scanner.yaml`
+- `applications/spoke-a-sre-rag.yaml`
+
+The same pattern exists for `spoke-b` as a template.
+
+## Legacy Cutover State
+
+The old `kb-system` stack used:
+- MinIO-backed exporters
+- legacy normalizer
+- legacy `kb-stack` ArgoCD application from `idp-app-v1`
+
+Current cutover expectation:
+- active collection is handled by `sre-exporters` and `sre-system`
+- old `kb-system` CronJobs are suspended
+- Qdrant is still shared, but the active collections are driven by the new S3-based flow
