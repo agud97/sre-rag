@@ -93,6 +93,22 @@
 - Problem: the first real embedding model (`all-MiniLM-L6-v2`) is lightweight but suboptimal for the actual retrieval pattern in this project, because operators use Russian-language queries against mostly English Kubernetes findings.
 - Resolution: migrate to `intfloat/multilingual-e5-large-instruct`, pin the embedding service to the dedicated `c8-m16384-d120-hp` node class, raise memory and CPU reservations, and update HolmesGPT query embedding to prepend an instruction string as recommended by the E5 model card.
 
+- Problem: under the heavier E5 workload, the embedding service became unstable because the original HTTP server was single-threaded, and Kubernetes liveness checks timed out while `/embed` requests were being processed.
+- Resolution: switch the service to `ThreadingHTTPServer`, relax probe timeouts, complete rollout on the dedicated node, and then run a clean reindex with empty Qdrant collections.
+
+- Problem: a rolling update of the single-replica embedding service on a dedicated node deadlocked because the old pod still held the full memory request and prevented the new pod from scheduling.
+- Resolution: remove the stuck old pod, let the new replica claim the dedicated node, and proceed with the rollout as an effective singleton restart.
+
+- Problem: after switching from 384-dimensional embeddings to 1024-dimensional E5 embeddings, existing Qdrant collections were no longer valid for direct reuse.
+- Resolution: delete `kb_docs_hub` and `kb_docs_spoke-a`, rerun the normalizer, and confirm a clean rebuild:
+  - `Loaded 8 docs from hub`
+  - `Upserted 8 docs to kb_docs_hub`
+  - `Loaded 6 docs from spoke-a`
+  - `Upserted 6 docs to kb_docs_spoke-a`
+
+- Problem: the new multilingual setup needed proof that Russian-language operator queries retrieve the expected English Kubernetes findings.
+- Resolution: run `python3 /kb-scripts/kb_tools.py search 'проблемы безопасности kubernetes' 5 spoke-a` inside HolmesGPT and confirm high-scoring hits for `kubescape`, `k8sgpt`, and `popeye` from `raw/.../spoke-a/...`.
+
 ### Next Steps
 - Treat the new architecture as operational for test use.
 - Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.
