@@ -3,3 +3,5 @@ kind: Kustomization
 
 resources:
   - kb-stack-toolset.yaml
+  - custom-runbooks-configmap.yaml
+  - sre-runbooks.yaml
