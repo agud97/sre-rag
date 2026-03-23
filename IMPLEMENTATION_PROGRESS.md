@@ -33,5 +33,8 @@
 - Problem: existing Hub `holmesgpt` deployment still mounts runbook ConfigMaps that were absent from the new app spec.
 - Resolution: preserved those mounts in the new `hub-holmesgpt.yaml` while switching storage integration from MinIO to S3.
 
+- Problem: `holmesgpt-configs` historically owned additional runbook resources not present in the new repo path.
+- Resolution: disable pruning for `holmesgpt-configs` so ArgoCD does not delete legacy runbook ConfigMaps required by the live HolmesGPT deployment.
+
 ### Next Steps
 - Optional next execution step is cluster deployment and runtime verification.
