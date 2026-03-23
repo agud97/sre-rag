@@ -77,6 +77,16 @@
 - Problem: `k8sgpt` data did not appear in S3 because the exporter init container used `bitnami/kubectl:1.30`, and that tag does not exist on Docker Hub.
 - Resolution: switch the exporter to `bitnami/kubectl:latest`, push revision `f1a9e36`, wait for ArgoCD to reconcile, and verify a successful upload to `s3://sre-rag/raw/k8sgpt/hub/20260323T185208Z/results.json`.
 
+- Problem: Hub still had a legacy `kb-system` exporter stack writing to MinIO while the new `sre-exporters` stack was already configured for cloud S3, which meant two parallel collection paths existed for the same cluster.
+- Resolution: validate the new Hub exporters manually and confirm fresh cloud-S3 uploads for all three tools:
+  - `raw/k8sgpt/hub/20260323T190245Z/results.json`
+  - `raw/kubescape/hub/20260323T190259Z/findings.json`
+  - `raw/popeye/hub/20260323T190300Z/report.json`
+  Then run the new `sre-system` normalizer and confirm `Loaded 5 docs from hub`, `Upserted 5 docs to kb_docs_hub`, and payloads in Qdrant with `cluster_id=hub` and `source_key` under `raw/.../hub/...`.
+
+- Problem: legacy `kb-system` CronJobs would continue to launch the old MinIO-based pipeline until explicitly stopped.
+- Resolution: suspend legacy CronJobs `k8sgpt-exporter`, `kubescape-exporter`, `popeye`, `normalizer`, and `kubevious-exporter`, then delete the active legacy jobs so the old path stops executing.
+
 ### Next Steps
 - Treat the new architecture as operational for test use.
 - Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.
