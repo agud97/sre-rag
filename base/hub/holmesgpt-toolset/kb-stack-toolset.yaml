@@ -27,6 +27,10 @@ data:
     S3_VERIFY_SSL = os.environ.get("S3_VERIFY_SSL", "false").lower() == "true"
     QDRANT_ENDPOINT = os.environ.get("QDRANT_ENDPOINT", "http://qdrant.qdrant.svc.cluster.local:6333").rstrip("/")
     EMBEDDING_ENDPOINT = os.environ.get("EMBEDDING_ENDPOINT", "http://embedding-svc.sre-system.svc:7997").rstrip("/")
+    EMBEDDING_QUERY_INSTRUCTION = os.environ.get(
+      "EMBEDDING_QUERY_INSTRUCTION",
+      "Given an SRE or Kubernetes troubleshooting query, retrieve relevant cluster findings, diagnostics, and runbook passages that help answer it.",
+    )
 
     def s3_client():
       kwargs = {"region_name": S3_REGION}
@@ -43,7 +47,8 @@ data:
         return json.loads(resp.read().decode("utf-8"))
 
     def embed(query):
-      payload = http_json("POST", f"{EMBEDDING_ENDPOINT}/embed", {"texts": [query]})
+      prompt = f"Instruct: {EMBEDDING_QUERY_INSTRUCTION}\nQuery: {query}"
+      payload = http_json("POST", f"{EMBEDDING_ENDPOINT}/embed", {"texts": [prompt]})
       return payload["vectors"][0]
 
     def search(query, limit=5, cluster_id=""):
@@ -91,6 +96,7 @@ data:
   S3_VERIFY_SSL: "false"
   QDRANT_ENDPOINT: "http://qdrant.qdrant.svc.cluster.local:6333"
   EMBEDDING_ENDPOINT: "http://embedding-svc.sre-system.svc:7997"
+  EMBEDDING_QUERY_INSTRUCTION: "Given an SRE or Kubernetes troubleshooting query, retrieve relevant cluster findings, diagnostics, and runbook passages that help answer it."
 ---
 apiVersion: v1
 kind: Secret

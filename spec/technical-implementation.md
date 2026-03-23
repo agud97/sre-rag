@@ -88,13 +88,18 @@ Role:
 - provides the vector embedding endpoint used by the normalizer and HolmesGPT search
 
 Current model:
-- `sentence-transformers/all-MiniLM-L6-v2`
+- `intfloat/multilingual-e5-large-instruct`
 - CPU inference
-- 384-dimensional vectors
+- 1024-dimensional vectors
 
 API compatibility:
 - current internal clients use `POST /embed` with `{"texts": [...]}`
 - the service also exposes `POST /v1/embeddings` in an OpenAI-compatible shape for future integrations
+
+Retrieval detail:
+- query embeddings should include an instruction prefix
+- document embeddings should not include that prefix
+- HolmesGPT query search applies the instruction on the query side before calling the embedding service
 
 ### Normalizer
 

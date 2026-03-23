@@ -11,7 +11,7 @@ data:
 
     from sentence_transformers import SentenceTransformer
 
-    MODEL_NAME = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    MODEL_NAME = os.environ.get("EMBEDDING_MODEL", "intfloat/multilingual-e5-large-instruct")
     PORT = int(os.environ.get("PORT", "7997"))
 
     print(f"Loading embedding model: {MODEL_NAME}", flush=True)
@@ -92,17 +92,20 @@ spec:
         - key: node.cilium.io/agent-not-ready
           operator: Exists
           effect: NoSchedule
+      nodeSelector:
+        node.kubernetes.io/instance-type: c8-m16384-d120-hp
       containers:
         - name: server
           image: python:3.11-slim
           command: ["/bin/sh", "-c"]
           args:
             - |
-              pip install --no-cache-dir sentence-transformers >/tmp/pip.log 2>&1
+              python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch >/tmp/pip-torch.log 2>&1
+              python -m pip install --no-cache-dir sentence-transformers >/tmp/pip.log 2>&1
               python /app/server.py
           env:
             - name: EMBEDDING_MODEL
-              value: "sentence-transformers/all-MiniLM-L6-v2"
+              value: "intfloat/multilingual-e5-large-instruct"
             - name: PORT
               value: "7997"
           ports:
@@ -124,11 +127,11 @@ spec:
               port: 7997
           resources:
             requests:
-              cpu: 200m
-              memory: 512Mi
+              cpu: "2"
+              memory: 8Gi
             limits:
-              cpu: "1"
-              memory: 2Gi
+              cpu: "4"
+              memory: 12Gi
           volumeMounts:
             - name: script
               mountPath: /app

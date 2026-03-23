@@ -57,6 +57,8 @@ A healthy result looks like:
 
 The important part is the `key=raw/...` value. It proves the answer is backed by the indexed artifact pipeline.
 
+Under the hood, HolmesGPT now uses a multilingual embedding model, so Russian operator queries can retrieve English Kubernetes findings more reliably than the earlier lightweight baseline.
+
 ## How To Use HolmesGPT
 
 ### Search A Specific Cluster

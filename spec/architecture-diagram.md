@@ -44,7 +44,8 @@
                     +----------------------+
                     |   Embedding Service  |
                     | namespace: sre-system|
-                    | model: all-MiniLM... |
+                    | model: multilingual  |
+                    | e5-large-instruct    |
                     +----------------------+
                                 |
                                 | upsert points with payload:

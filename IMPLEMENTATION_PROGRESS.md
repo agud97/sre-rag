@@ -90,6 +90,9 @@
 - Problem: the initial `embedding-svc` implementation in `sre-rag` was only a deterministic hash-based stub, which is not suitable for real semantic retrieval.
 - Resolution: replace it with a real CPU embedding service based on `sentence-transformers/all-MiniLM-L6-v2` while keeping the existing `/embed` endpoint contract for current clients and adding `/v1/embeddings` compatibility for future integrations.
 
+- Problem: the first real embedding model (`all-MiniLM-L6-v2`) is lightweight but suboptimal for the actual retrieval pattern in this project, because operators use Russian-language queries against mostly English Kubernetes findings.
+- Resolution: migrate to `intfloat/multilingual-e5-large-instruct`, pin the embedding service to the dedicated `c8-m16384-d120-hp` node class, raise memory and CPU reservations, and update HolmesGPT query embedding to prepend an instruction string as recommended by the E5 model card.
+
 ### Next Steps
 - Treat the new architecture as operational for test use.
 - Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.

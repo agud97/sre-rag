@@ -108,8 +108,8 @@ kubectl run emb-check --rm -i --restart=Never -n sre-system --image=curlimages/c
 Expected:
 - deployment startup command installs `sentence-transformers`
 - logs show model loading
-- health endpoint returns `model: sentence-transformers/all-MiniLM-L6-v2`
-- `vector_size` is `384`
+- health endpoint returns `model: intfloat/multilingual-e5-large-instruct`
+- `vector_size` is `1024`
 
 ## Direct Qdrant Validation
 
