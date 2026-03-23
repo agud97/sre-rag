@@ -11,6 +11,8 @@ Today the supported data sources are:
 
 Search results point back to the raw artifact in S3 through `source_key`.
 
+The same HolmesGPT backend can also be exposed in Open WebUI through the `Holmes SRE Agent` Pipe model.
+
 ## Before You Start
 
 The system is working only if all stages are healthy:
@@ -100,6 +102,26 @@ Good examples:
 - `Show kubescape findings for spoke-a`
 - `Search k8sgpt problems in hub`
 - `Find popeye issues for spoke-a and give me the artifact key`
+
+## How To Use Holmes SRE Agent In Open WebUI
+
+If the `Holmes SRE Agent` Pipe has been imported into Open WebUI:
+
+1. Open the model selector.
+2. Choose `Holmes SRE Agent`.
+3. Chat normally in the Open WebUI interface.
+4. Ask follow-up questions in the same conversation.
+
+What happens under the hood:
+- Open WebUI stores the visible chat history
+- the Pipe forwards the latest message and earlier turns to HolmesGPT as `conversation_history`
+- HolmesGPT returns the final analysis back into the same Open WebUI chat
+
+Recommended question style in Open WebUI:
+- `Какие самые важные security issues сейчас есть в spoke-a?`
+- `Покажи только kubescape findings по hub`
+- `Сравни последние результаты k8sgpt и popeye для spoke-a`
+- `Почему этот pod может не стартовать? Проверь возможные проблемы в кластере hub`
 
 Weak examples:
 - `What clusters are bad right now`

@@ -112,6 +112,9 @@
 - Problem: after the E5 migration, some technical documents still described the old `384`-dimensional expectations or did not explicitly document the dedicated embedding node and E5 query-instruction behavior.
 - Resolution: audit and update `PLAN.md`, `spec/architecture-diagram.md`, `spec/technical-implementation.md`, `spec/config-and-secrets.md`, `spec/change-guide.md`, and `spec/verification-and-operations.md` so they match the current `intfloat/multilingual-e5-large-instruct` deployment, `1024`-dimensional vectors, dedicated `c8-m16384-d120-hp` node placement, and HolmesGPT query-instruction contract.
 
+- Problem: operators also need a regular chat UI path where HolmesGPT appears as a selectable model rather than only a backend service or direct pod command.
+- Resolution: add `open-webui/functions/holmes_sre_agent.py` as an Open WebUI Pipe Function that maps Open WebUI `messages` into HolmesGPT `ask` plus `conversation_history`, returns an OpenAI-compatible completion response, and document import and usage in `docs/open-webui-holmes-sre-agent.md` together with architecture and user-guide updates.
+
 ### Next Steps
 - Treat the new architecture as operational for test use.
 - Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.

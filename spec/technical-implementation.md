@@ -21,6 +21,9 @@ The implementation is split into three layers:
 - uses `kb_tools.py`
 - queries Qdrant collections and returns `tool`, `timestamp`, and `source_key`
 
+4. Open WebUI integration
+- optional Pipe Function exposes HolmesGPT as a selectable model in the Open WebUI chat interface
+
 ## Repository Structure
 
 - `applications/`
@@ -135,6 +138,21 @@ Role:
 - provides `kb_tools.py`
 - `search(query, limit, cluster_id)` targets `kb_docs_<cluster_id>`
 - if no `cluster_id` is provided, the current default is `kb_docs_hub`
+
+### Open WebUI Pipe
+
+Files:
+- `open-webui/functions/holmes_sre_agent.py`
+
+Role:
+- exposes HolmesGPT as an Open WebUI model named `Holmes SRE Agent`
+- converts Open WebUI `messages` into HolmesGPT `ask` and `conversation_history`
+- calls `POST /api/chat`
+- returns an OpenAI-compatible completion response back to Open WebUI
+
+Important implementation detail:
+- multi-turn context is preserved by forwarding prior Open WebUI messages as `conversation_history`
+- the Pipe itself remains stateless outside the current Open WebUI conversation
 
 ## ArgoCD Applications
 

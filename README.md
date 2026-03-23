@@ -6,6 +6,7 @@ Components:
 - Exporters for `kubescape`, `popeye`, and `k8sgpt`
 - Hub services for embeddings and normalization
 - Qdrant and HolmesGPT ArgoCD applications
+- Open WebUI Pipe Function for `Holmes SRE Agent`
 
 Repository layout:
 - `base/` shared manifests
@@ -21,3 +22,4 @@ Start with:
 - `spec/README.md`
 - `spec/technical-implementation.md`
 - `spec/user-guide-holmesgpt.md`
+- `docs/open-webui-holmes-sre-agent.md`

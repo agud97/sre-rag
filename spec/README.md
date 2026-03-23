@@ -10,5 +10,6 @@ Documents:
 - `change-guide.md` — how to safely extend and change the system.
 - `verification-and-operations.md` — operator checks, smoke tests, and troubleshooting.
 - `user-guide-holmesgpt.md` — user-facing guide for validating the system and using HolmesGPT.
+- `../docs/open-webui-holmes-sre-agent.md` — Open WebUI Pipe Function import and usage guide.
 
 Use this folder as the primary reference when changing manifests, adding clusters, or validating rollouts.

@@ -68,6 +68,22 @@
                     | namespace: holmesgpt |
                     | kb_tools.py          |
                     +----------------------+
+                                ^
+                                |
+                                | POST /api/chat
+                                | ask + conversation_history
+                    +-----------+----------+
+                    |    Open WebUI Pipe   |
+                    |  Holmes SRE Agent    |
+                    +-----------+----------+
+                                ^
+                                |
+                                | regular multi-turn chat
+                                v
+                    +----------------------+
+                    |     Open WebUI       |
+                    | user-facing chat UI  |
+                    +----------------------+
 ```
 
 ## Namespace Layout
@@ -86,6 +102,10 @@
 
 - `qdrant`
   Shared vector store.
+
+- `open-webui`
+  Optional user-facing chat UI.
+  The Holmes SRE Agent Pipe runs inside Open WebUI and forwards chat history to HolmesGPT.
 
 - `kb-system`
   Legacy MinIO-based stack. This is no longer the active collection path and its CronJobs are expected to stay suspended.
@@ -156,3 +176,7 @@ Additional embedding-specific expectations:
 - query embeddings use an instruction prefix before they are sent to the embedding service
 - document embeddings do not use that prefix
 - changing the embedding model or vector size requires Qdrant collection recreation or a clean reindex
+
+Open WebUI-specific expectations:
+- `Holmes SRE Agent` is a Pipe Function, not a separate LLM deployment
+- multi-turn behavior comes from forwarding Open WebUI message history as HolmesGPT `conversation_history`

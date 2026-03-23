@@ -113,6 +113,19 @@ Expected:
 - pod is scheduled onto the dedicated `c8-m16384-d120-hp` node class
 - service remains healthy while handling `/embed` requests and Kubernetes probes concurrently
 
+### 9. Verify Open WebUI Pipe
+
+If the `Holmes SRE Agent` Pipe has been imported into Open WebUI:
+
+- confirm the model selector contains `Holmes SRE Agent`
+- open a fresh chat and ask a simple Holmes question
+- ask a follow-up question in the same chat and confirm the answer reflects prior context
+
+Minimum expectation:
+- Open WebUI shows the Pipe as a model
+- the answer is produced by HolmesGPT rather than the default LLM provider
+- a follow-up turn still makes sense without repeating the whole previous answer
+
 ## Direct Qdrant Validation
 
 If `kubectl port-forward` is available:
@@ -194,3 +207,17 @@ Check:
 - direct `kb_tools.py search`
 - Qdrant payload presence
 - `holmesgpt-configs` state
+
+### Open WebUI Pipe Fails
+
+Typical causes:
+- wrong `HOLMES_API_BASE_URL` valve
+- Open WebUI cannot reach the in-cluster Holmes service DNS name
+- imported function code is outdated
+- HolmesGPT itself is unhealthy
+
+Check:
+- the function valves in Open WebUI
+- direct curl or browser reachability from the Open WebUI runtime network
+- `docs/open-webui-holmes-sre-agent.md`
+- direct HolmesGPT `/api/chat` behavior

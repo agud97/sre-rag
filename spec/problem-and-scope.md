@@ -10,6 +10,7 @@ The target outcome is:
 - normalize those raw artifacts into searchable documents
 - index those documents in Qdrant per cluster
 - make them available to HolmesGPT tools for retrieval during investigations
+- expose HolmesGPT through Open WebUI as a regular chat model for multi-turn user conversations
 
 The system is intended to replace a legacy MinIO-based single-stack flow with a cleaner multi-cluster model.
 
@@ -30,6 +31,7 @@ It also provides a repeatable rollout model for adding more spoke clusters.
 - hub-side embedding and normalization pipeline
 - Qdrant collections per cluster
 - HolmesGPT knowledge tools that search the indexed data
+- Open WebUI Pipe Function that proxies chat requests to HolmesGPT
 - ArgoCD-managed deployment model
 - separate overlays for hub and spoke clusters
 
