@@ -5,23 +5,22 @@ metadata:
   namespace: sre-system
 data:
   server.py: |
-    import hashlib
     import json
+    import os
     from http.server import BaseHTTPRequestHandler, HTTPServer
 
-    VECTOR_SIZE = 384
+    from sentence_transformers import SentenceTransformer
 
-    def embed_text(text):
-      digest = hashlib.sha256(text.encode("utf-8")).digest()
-      values = []
-      seed = digest
-      while len(values) < VECTOR_SIZE:
-        seed = hashlib.sha256(seed).digest()
-        for byte in seed:
-          values.append((byte / 255.0) - 0.5)
-          if len(values) == VECTOR_SIZE:
-            break
-      return values
+    MODEL_NAME = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    PORT = int(os.environ.get("PORT", "7997"))
+
+    print(f"Loading embedding model: {MODEL_NAME}", flush=True)
+    MODEL = SentenceTransformer(MODEL_NAME)
+    VECTOR_SIZE = MODEL.get_sentence_embedding_dimension()
+    print(f"Embedding model ready. vector_size={VECTOR_SIZE}", flush=True)
+
+    def embed_texts(texts):
+      return MODEL.encode(texts, normalize_embeddings=True).tolist()
 
     class Handler(BaseHTTPRequestHandler):
       def _send(self, status, payload):
@@ -34,22 +33,45 @@ data:
 
       def do_GET(self):
         if self.path == "/health":
-          self._send(200, {"status": "ok", "vector_size": VECTOR_SIZE})
+          self._send(200, {"status": "ok", "model": MODEL_NAME, "vector_size": VECTOR_SIZE})
           return
         self._send(404, {"error": "not found"})
 
       def do_POST(self):
-        if self.path != "/embed":
+        if self.path not in ("/embed", "/v1/embeddings"):
           self._send(404, {"error": "not found"})
           return
         length = int(self.headers.get("Content-Length", "0"))
         body = self.rfile.read(length)
         payload = json.loads(body or b"{}")
-        texts = payload.get("texts", [])
-        self._send(200, {"vectors": [embed_text(text) for text in texts]})
+        if self.path == "/embed":
+          texts = payload.get("texts", [])
+          self._send(200, {"vectors": embed_texts(texts)})
+          return
+        texts = payload.get("input", [])
+        texts = texts if isinstance(texts, list) else [texts]
+        vectors = embed_texts(texts)
+        self._send(
+          200,
+          {
+            "object": "list",
+            "data": [
+              {"object": "embedding", "index": idx, "embedding": vector}
+              for idx, vector in enumerate(vectors)
+            ],
+            "model": MODEL_NAME,
+            "usage": {
+              "prompt_tokens": sum(len(text.split()) for text in texts),
+              "total_tokens": sum(len(text.split()) for text in texts),
+            },
+          },
+        )
+
+      def log_message(self, fmt, *args):
+        print(f"[HTTP] {fmt % args}", flush=True)
 
     if __name__ == "__main__":
-      HTTPServer(("0.0.0.0", 7997), Handler).serve_forever()
+      HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -73,9 +95,25 @@ spec:
       containers:
         - name: server
           image: python:3.11-slim
-          command: ["python", "/app/server.py"]
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              pip install --no-cache-dir sentence-transformers >/tmp/pip.log 2>&1
+              python /app/server.py
+          env:
+            - name: EMBEDDING_MODEL
+              value: "sentence-transformers/all-MiniLM-L6-v2"
+            - name: PORT
+              value: "7997"
           ports:
             - containerPort: 7997
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 7997
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 20
           readinessProbe:
             httpGet:
               path: /health
@@ -86,11 +124,11 @@ spec:
               port: 7997
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
+              cpu: 200m
               memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
           volumeMounts:
             - name: script
               mountPath: /app

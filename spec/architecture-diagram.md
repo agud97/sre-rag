@@ -44,6 +44,7 @@
                     +----------------------+
                     |   Embedding Service  |
                     | namespace: sre-system|
+                    | model: all-MiniLM... |
                     +----------------------+
                                 |
                                 | upsert points with payload:

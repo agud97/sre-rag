@@ -92,6 +92,25 @@ Expected:
 - search hits with `tool=...`
 - `key=raw/.../spoke-a/...`
 
+### 8. Verify The Embedding Model
+
+The embedding service should no longer be a hash-based stub.
+
+Check:
+
+```bash
+kubectl get deployment embedding-svc -n sre-system -o yaml
+kubectl logs deployment/embedding-svc -n sre-system
+kubectl run emb-check --rm -i --restart=Never -n sre-system --image=curlimages/curl \
+  --command -- curl -s http://embedding-svc.sre-system.svc:7997/health
+```
+
+Expected:
+- deployment startup command installs `sentence-transformers`
+- logs show model loading
+- health endpoint returns `model: sentence-transformers/all-MiniLM-L6-v2`
+- `vector_size` is `384`
+
 ## Direct Qdrant Validation
 
 If `kubectl port-forward` is available:

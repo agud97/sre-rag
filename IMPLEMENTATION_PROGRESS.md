@@ -87,6 +87,9 @@
 - Problem: legacy `kb-system` CronJobs would continue to launch the old MinIO-based pipeline until explicitly stopped.
 - Resolution: suspend legacy CronJobs `k8sgpt-exporter`, `kubescape-exporter`, `popeye`, `normalizer`, and `kubevious-exporter`, then delete the active legacy jobs so the old path stops executing.
 
+- Problem: the initial `embedding-svc` implementation in `sre-rag` was only a deterministic hash-based stub, which is not suitable for real semantic retrieval.
+- Resolution: replace it with a real CPU embedding service based on `sentence-transformers/all-MiniLM-L6-v2` while keeping the existing `/embed` endpoint contract for current clients and adding `/v1/embeddings` compatibility for future integrations.
+
 ### Next Steps
 - Treat the new architecture as operational for test use.
 - Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.

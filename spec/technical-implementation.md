@@ -85,7 +85,16 @@ Files:
 - `base/hub/embedding-svc/embedding-svc.yaml`
 
 Role:
-- provides the vector embedding endpoint used by the normalizer
+- provides the vector embedding endpoint used by the normalizer and HolmesGPT search
+
+Current model:
+- `sentence-transformers/all-MiniLM-L6-v2`
+- CPU inference
+- 384-dimensional vectors
+
+API compatibility:
+- current internal clients use `POST /embed` with `{"texts": [...]}`
+- the service also exposes `POST /v1/embeddings` in an OpenAI-compatible shape for future integrations
 
 ### Normalizer
 
