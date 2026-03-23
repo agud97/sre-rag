@@ -10,6 +10,8 @@
 - GitHub delivery is configured and multiple rollout commits were pushed to `origin/main`.
 - SpokeA applications `k8sgpt`, `spoke-a-k8sgpt-scanner`, and `spoke-a-sre-rag` are `Synced/Healthy`.
 - Manual spoke validation succeeded for `kubescape` exporter up to confirmed S3 object creation.
+- Hub applications `hub-sre-rag`, `qdrant`, and `holmesgpt` are now `Synced/Healthy`.
+- End-to-end data path is confirmed: `spoke exporter -> S3 raw -> normalizer -> Qdrant -> HolmesGPT kb_tools`.
 
 ### Decisions Applied
 - One shared S3 credential set is used for exporters, normalizer, and HolmesGPT.
@@ -18,7 +20,7 @@
 - `kubevious` is excluded from the current implementation to remove scope ambiguity.
 
 ### Current Work
-- Deployment validation and documenting remaining infrastructure blockers on Hub.
+- Final rollout validation and documenting the remaining legacy ArgoCD drift.
 
 ### Problems And Resolutions
 - Problem: `PLAN.md` described cross-namespace reuse of `sre-rag-config`, which is not valid in Kubernetes.
@@ -55,14 +57,24 @@
 - Resolution: force-delete the stale pod so the StatefulSet could recreate a healthy controller and resume reconciliation.
 
 - Problem: full Hub end-to-end validation is currently blocked by cluster health, not by application manifests.
-- Resolution: identified two external blockers:
-  1. `normalizer` job cannot schedule because all Hub nodes currently carry `NoSchedule` taints (`node.kubernetes.io/unreachable` or `node.kubernetes.io/disk-pressure`).
-  2. `holmesgpt` rollout is still `Progressing` because the cluster is under memory pressure during rolling update.
+- Resolution: this was transient infrastructure pressure. After targeted tolerations and subsequent rescheduling, Hub components recovered and the new stack completed validation.
 
 - Problem: after the controller recovered, new Hub pods still could not schedule onto the only otherwise usable node because it carries `node.cilium.io/agent-not-ready:NoSchedule`.
 - Resolution: add a targeted toleration for `node.cilium.io/agent-not-ready` to the new Hub components (`embedding-svc`, `normalizer`, `qdrant`, `holmesgpt`). `disk-pressure` taints are intentionally not tolerated.
 
+- Problem: legacy Qdrant PVC was pinned to an unavailable node through PV node affinity, leaving the `qdrant` service without endpoints and blocking `normalizer` writes.
+- Resolution: because this is a test installation and data loss is acceptable, delete the stale pod and PVC, allow the StatefulSet to provision a fresh volume on a schedulable node, then re-run ingestion from S3.
+
+- Problem: `holmesgpt` initially remained unhealthy because the new repo path did not yet provide all ConfigMaps that the live deployment mounts.
+- Resolution: add `custom-runbooks` and `sre-runbooks` ConfigMaps to `base/hub/holmesgpt-toolset`, keep the new S3-backed `kb-stack-toolset`, and sync the application again.
+
+- Problem: `holmesgpt-configs` remains `OutOfSync/Progressing` even though the new knowledge-base path is working.
+- Resolution: the only remaining drift is a legacy `holmes-alertmanager-bridge` Deployment that still exists in-cluster from the old `idp-app-v1` application history and is shown as `RequiresPruning`. This does not block the new SRE-RAG data path and should be handled as a separate cleanup step after migration.
+
+- Problem: HolmesGPT end-to-end validation needed proof that it reads from the new Qdrant collections created by the new normalizer.
+- Resolution: run `python3 /kb-scripts/kb_tools.py search 'security findings' 5 spoke-a` inside the live Holmes pod and confirm results from the new `raw/kubescape/...` and `raw/popeye/...` objects.
+
 ### Next Steps
-- Restore schedulable capacity on the Hub cluster or tolerate the active taints if that is operationally acceptable.
-- Re-run `test-norm` and Qdrant validation after Hub nodes become schedulable.
-- Finish HolmesGPT rollout after resource pressure on Hub is resolved.
+- Treat the new architecture as operational for test use.
+- Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.
+- Add a repeatable smoke-test checklist for `exporter -> S3 -> normalizer -> Qdrant -> HolmesGPT`.
