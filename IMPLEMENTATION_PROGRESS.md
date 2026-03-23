@@ -36,5 +36,8 @@
 - Problem: `holmesgpt-configs` historically owned additional runbook resources not present in the new repo path.
 - Resolution: disable pruning for `holmesgpt-configs` so ArgoCD does not delete legacy runbook ConfigMaps required by the live HolmesGPT deployment.
 
+- Problem: `kubescape/kubescape:latest` on Docker Hub does not exist, causing `ErrImagePull` in the exporter validation job.
+- Resolution: switch exporter image to pinned `quay.io/kubescape/kubescape:v3.0.31`, which resolves successfully.
+
 ### Next Steps
 - Optional next execution step is cluster deployment and runtime verification.

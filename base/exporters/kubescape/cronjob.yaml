@@ -18,7 +18,7 @@ spec:
               emptyDir: {}
           initContainers:
             - name: kubescape
-              image: kubescape/kubescape:latest
+              image: quay.io/kubescape/kubescape:v3.0.31
               command:
                 - /bin/sh
                 - -c
