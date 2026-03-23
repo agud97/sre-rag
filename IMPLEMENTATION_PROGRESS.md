@@ -115,6 +115,9 @@
 - Problem: operators also need a regular chat UI path where HolmesGPT appears as a selectable model rather than only a backend service or direct pod command.
 - Resolution: add `open-webui/functions/holmes_sre_agent.py` as an Open WebUI Pipe Function that maps Open WebUI `messages` into HolmesGPT `ask` plus `conversation_history`, returns an OpenAI-compatible completion response, and document import and usage in `docs/open-webui-holmes-sre-agent.md` together with architecture and user-guide updates.
 
+- Problem: the Open WebUI Pipe needed live runtime verification in the actual cluster, not only a repository-side implementation.
+- Resolution: import `holmes_sre_agent` into the live Open WebUI SQLite-backed function store, confirm through `/api/v1/functions/id/holmes_sre_agent` that it is an active `pipe`, and confirm through `open_webui.functions.get_function_models()` that the UI publishes it as model `holmes_sre_agent.holmes_sre_agent` with display name `Holmes SRE Agent`. A direct chat-completion dispatch reached HolmesGPT but currently fails deeper in the stack with `litellm.Timeout` and downstream `504 Gateway Timeout` from `llm-proxy`, which means the Open WebUI Pipe layer itself is wired correctly and the remaining blocker is the LLM backend path.
+
 ### Next Steps
 - Treat the new architecture as operational for test use.
 - Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.
