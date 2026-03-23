@@ -109,6 +109,9 @@
 - Problem: the new multilingual setup needed proof that Russian-language operator queries retrieve the expected English Kubernetes findings.
 - Resolution: run `python3 /kb-scripts/kb_tools.py search 'проблемы безопасности kubernetes' 5 spoke-a` inside HolmesGPT and confirm high-scoring hits for `kubescape`, `k8sgpt`, and `popeye` from `raw/.../spoke-a/...`.
 
+- Problem: after the E5 migration, some technical documents still described the old `384`-dimensional expectations or did not explicitly document the dedicated embedding node and E5 query-instruction behavior.
+- Resolution: audit and update `PLAN.md`, `spec/architecture-diagram.md`, `spec/technical-implementation.md`, `spec/config-and-secrets.md`, `spec/change-guide.md`, and `spec/verification-and-operations.md` so they match the current `intfloat/multilingual-e5-large-instruct` deployment, `1024`-dimensional vectors, dedicated `c8-m16384-d120-hp` node placement, and HolmesGPT query-instruction contract.
+
 ### Next Steps
 - Treat the new architecture as operational for test use.
 - Optionally clean up legacy `idp-app-v1` resources and ArgoCD ownership drift after the team confirms cutover.

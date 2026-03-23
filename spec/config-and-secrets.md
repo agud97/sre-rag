@@ -49,6 +49,7 @@ Required in `holmesgpt/sre-rag-config`:
 - `S3_VERIFY_SSL`
 - `QDRANT_ENDPOINT`
 - `EMBEDDING_ENDPOINT`
+- `EMBEDDING_QUERY_INSTRUCTION`
 
 ## Secret Model
 
@@ -90,6 +91,11 @@ Payload fields written by the normalizer:
 - `timestamp`
 - `source_key`
 - `text`
+
+Embedding contract:
+- current vector size is `1024`
+- current production model is `intfloat/multilingual-e5-large-instruct`
+- any future vector-size change requires new Qdrant collections or a full collection reset before reindex
 
 ## TLS Verification
 

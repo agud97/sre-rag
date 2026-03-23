@@ -46,6 +46,9 @@
                     | namespace: sre-system|
                     | model: multilingual  |
                     | e5-large-instruct    |
+                    | vectors: 1024 dims   |
+                    | node: c8-m16384-     |
+                    | d120-hp              |
                     +----------------------+
                                 |
                                 | upsert points with payload:
@@ -76,6 +79,7 @@
 
 - `sre-system`
   New embedding service and normalizer.
+  The embedding service is pinned to a dedicated node class for `multilingual-e5-large-instruct`.
 
 - `holmesgpt`
   HolmesGPT deployment plus `kb_tools.py` config and S3/Qdrant access.
@@ -147,3 +151,8 @@ If a cluster is working in the new architecture, you should be able to trace one
 - `cluster_id=<cluster_id>`
 - `source_key=raw/.../<cluster_id>/...`
 4. HolmesGPT search returns the same `source_key`
+
+Additional embedding-specific expectations:
+- query embeddings use an instruction prefix before they are sent to the embedding service
+- document embeddings do not use that prefix
+- changing the embedding model or vector size requires Qdrant collection recreation or a clean reindex

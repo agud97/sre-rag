@@ -110,6 +110,8 @@ Expected:
 - logs show model loading
 - health endpoint returns `model: intfloat/multilingual-e5-large-instruct`
 - `vector_size` is `1024`
+- pod is scheduled onto the dedicated `c8-m16384-d120-hp` node class
+- service remains healthy while handling `/embed` requests and Kubernetes probes concurrently
 
 ## Direct Qdrant Validation
 

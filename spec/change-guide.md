@@ -22,6 +22,7 @@ Needs extra care:
 - changing payload field names in the normalizer
 - changing Qdrant collection naming
 - changing `cluster_id` values for already indexed clusters
+- changing the embedding model family or vector size
 - changing secret names or key names
 
 ## How To Add A New Spoke
@@ -80,6 +81,24 @@ When changing the normalizer:
 - inspect `normalized/docs/...`
 - inspect Qdrant payloads directly
 - validate HolmesGPT search results
+
+## How To Change The Embedding Model
+
+Embedding-model changes are data-model changes, not simple image updates.
+
+Changing the embedding model can affect:
+- vector dimensionality
+- query formatting requirements
+- retrieval quality for existing indexed data
+- pod sizing and node placement
+
+When changing the embedding model:
+- update `base/hub/embedding-svc/embedding-svc.yaml`
+- check whether the new model requires a dedicated node or larger requests and limits
+- if the model is E5-style, ensure HolmesGPT query search still prepends `EMBEDDING_QUERY_INSTRUCTION`
+- recreate the target Qdrant collections or clear them before reindex
+- run a full hub and spoke reindex
+- validate at least one Russian-language and one English-language HolmesGPT query
 
 ## Legacy Cleanup Rules
 

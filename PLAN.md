@@ -955,7 +955,7 @@ kubectl get cronjobs -n sre-exporters
 kubectl get deploy -n sre-system
 kubectl run emb-test --rm -i --restart=Never --image=curlimages/curl \
   --command -- curl -s http://embedding-svc.sre-system.svc:7997/health
-# Ожидается: {"status": "ok", "vector_size": 384}
+# Ожидается: {"status": "ok", "model": "intfloat/multilingual-e5-large-instruct", "vector_size": 1024}
 ```
 
 ### 10.3 После деплоя SpokeA
@@ -994,7 +994,7 @@ curl -s http://localhost:6333/collections | python3 -c \
 
 curl -s http://localhost:6333/collections/kb_docs_spoke-a | \
   python3 -c "import sys,json; r=json.load(sys.stdin)['result']; print(f'points={r[\"points_count\"]} size={r[\"config\"][\"params\"][\"vectors\"][\"size\"]}')"
-# Ожидается: points=N size=384
+# Ожидается: points=N size=1024
 ```
 
 ### 10.5 HolmesGPT kb/stack toolset

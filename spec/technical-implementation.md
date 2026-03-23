@@ -91,6 +91,11 @@ Current model:
 - `intfloat/multilingual-e5-large-instruct`
 - CPU inference
 - 1024-dimensional vectors
+- scheduled onto the dedicated `c8-m16384-d120-hp` node class
+
+Runtime detail:
+- the service uses `ThreadingHTTPServer` so readiness and liveness probes do not stall behind a long embedding request
+- probe timeouts are intentionally higher than the earlier lightweight model
 
 API compatibility:
 - current internal clients use `POST /embed` with `{"texts": [...]}`
@@ -100,6 +105,7 @@ Retrieval detail:
 - query embeddings should include an instruction prefix
 - document embeddings should not include that prefix
 - HolmesGPT query search applies the instruction on the query side before calling the embedding service
+- changing model family or vector size requires a clean reindex into fresh Qdrant collections
 
 ### Normalizer
 
