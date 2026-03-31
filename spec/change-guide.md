@@ -11,7 +11,7 @@
 ## Safe Change Areas
 
 Usually safe:
-- adding a new spoke application set based on the shared spoke template
+- adding a new spoke based on the shared spoke apps and `cluster-identity`
 - adjusting schedules
 - updating exporter images
 - extending HolmesGPT tools
@@ -36,6 +36,7 @@ Needs extra care:
 4. Sync `k8sgpt` operator, then scanner, then `sre-rag`.
 5. Trigger at least one exporter job manually.
 6. Run the hub normalizer.
+7. If the full cron path is too slow, run a targeted reindex for the latest artifacts of that cluster.
 7. Confirm a new Qdrant collection `kb_docs_<new-name>` appears.
 
 ## How To Change Cluster Identity
@@ -80,6 +81,7 @@ When changing the normalizer:
 - inspect `normalized/docs/...`
 - inspect Qdrant payloads directly
 - validate HolmesGPT search results
+- remember that the current bottleneck is usually embedding throughput rather than parsing
 
 ## How To Change The Embedding Model
 
@@ -98,6 +100,7 @@ When changing the embedding model:
 - recreate the target Qdrant collections or clear them before reindex
 - run a full hub and spoke reindex
 - validate at least one Russian-language and one English-language HolmesGPT query
+- validate that the runtime latency is acceptable for the full `normalizer` backlog, not just for single ad hoc calls
 
 ## Legacy Cleanup Rules
 
@@ -106,6 +109,7 @@ The old `kb-system` stack should be removed only after:
 - new normalizer is confirmed for hub and spokes
 - Qdrant contains the expected new payloads
 - HolmesGPT uses the new toolset successfully
+- Open WebUI is either healthy end-to-end or explicitly documented as blocked by external LLM availability
 
 Until then:
 - prefer `suspend=true` for old CronJobs

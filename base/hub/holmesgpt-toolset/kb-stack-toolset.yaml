@@ -6,6 +6,7 @@ metadata:
 data:
   kb-stack-toolset.yaml: |
     name: kb/stack
+    description: Search and fetch SRE RAG knowledge base documents from Qdrant and S3.
     tools:
       - name: kb_search
         description: Search normalized SRE knowledge base documents in Qdrant

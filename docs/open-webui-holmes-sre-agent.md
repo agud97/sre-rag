@@ -41,6 +41,13 @@ Recommended in-cluster value:
 http://holmesgpt-holmes.holmesgpt.svc:80
 ```
 
+Current live dependency chain:
+- Open WebUI Pipe -> Holmes `/api/chat`
+- Holmes -> `llm-proxy` OpenAI-compatible endpoint
+- `llm-proxy` -> upstream model backend
+
+This means the Pipe can be correctly installed and still fail if the downstream Holmes LLM provider is timing out.
+
 ## What The User Sees
 
 After enablement, the model selector should include:
@@ -57,3 +64,4 @@ Selecting it routes the chat to HolmesGPT.
 - Multi-turn context comes from the Open WebUI conversation transcript.
 - This is intentionally simpler than depending on a separate HolmesGPT session API.
 - The Pipe supports both standard and streaming Open WebUI chat requests.
+- If Holmes returns `500` with a nested `504 Gateway Time-out`, check the `llm-proxy` deployment and its upstream model reachability before changing the Pipe code.

@@ -53,6 +53,11 @@ Required in `holmesgpt/sre-rag-config`:
 - `EMBEDDING_ENDPOINT`
 - `EMBEDDING_QUERY_INSTRUCTION`
 
+Additional Holmes runtime dependency outside this `ConfigMap`:
+- `MODEL` is currently set in `applications/hub-holmesgpt.yaml` to `openai/qwen3-coder-30b-a3b-instruct-mlx`
+- `OPENAI_API_BASE` is currently `http://llm-proxy.llm-proxy.svc.cluster.local:8080/v1`
+- if `llm-proxy` or its upstream model is unavailable, Open WebUI and Holmes chat fail even when retrieval data is present
+
 ## Secret Model
 
 Real credentials are not stored in git.
@@ -98,6 +103,7 @@ Embedding contract:
 - current vector size is `1024`
 - current production model is `intfloat/multilingual-e5-large-instruct`
 - any future vector-size change requires new Qdrant collections or a full collection reset before reindex
+- current CPU throughput is low enough that full `normalizer` runs may lag; this is an operational constraint, not a schema issue
 
 ## TLS Verification
 

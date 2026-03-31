@@ -41,7 +41,7 @@ The implementation is split into three layers:
   Hub-side embedding service, normalizer, and HolmesGPT toolset config.
 
 - `base/k8sgpt-scanner/`
-  Shared `k8sgpt` scanner manifest used by spoke overlays.
+  Shared `k8sgpt` scanner manifest used by the shared spoke app.
 
 - `overlays/hub/`
   Hub-specific `ConfigMap` values for exporters and system components.
@@ -132,6 +132,11 @@ Role:
 Important implementation detail:
 - `cluster_id` is derived from the S3 object key, not from the hub cluster runtime
 
+Current runtime note:
+- the full hourly cron job indexes every raw object under `raw/`
+- on the current CPU-only embedding setup this can lag behind fresh uploads
+- for recovery or validation, a targeted manual reindex of the latest artifacts per cluster is acceptable and was used on the stand to refresh `hub` and `spoke-a`
+
 ### HolmesGPT Toolset
 
 Files:
@@ -143,6 +148,10 @@ Role:
 - provides `kb_tools.py`
 - `search(query, limit, cluster_id)` targets `kb_docs_<cluster_id>`
 - if no `cluster_id` is provided, the current default is `kb_docs_hub`
+
+Important implementation detail:
+- the mounted `kb-stack-toolset.yaml` must include a top-level `description`
+- without that field Holmes loads the chat service but marks the `kb/stack` toolset invalid for `/api/chat`
 
 ### Open WebUI Pipe
 
@@ -158,6 +167,7 @@ Role:
 Important implementation detail:
 - multi-turn context is preserved by forwarding prior Open WebUI messages as `conversation_history`
 - the Pipe itself remains stateless outside the current Open WebUI conversation
+- the Pipe itself is healthy if it can execute and reach Holmes; final chat success still depends on the downstream Holmes LLM provider
 
 ## ArgoCD Applications
 
@@ -198,6 +208,7 @@ How the Git-backed apps expand:
 Important caveat:
 
 - the shared spoke app names assume one ArgoCD instance per spoke cluster; they are not intended to be applied into a single shared ArgoCD namespace across many clusters
+- `overlays/spoke-a` and `overlays/spoke-b` remain in git only as legacy reference and are not the active rollout path
 
 ### Per-Spoke ArgoCD Model
 
@@ -210,6 +221,20 @@ The active rollout model is:
 - the scanner app points to `base/k8sgpt-scanner`
 
 This keeps spoke rollout isolated per cluster and avoids hub-side remote-cluster registration.
+
+## Current Live State
+
+Validated on the stand:
+- `hub` acts as both hub and spoke; its exporters also use `sre-exporters/cluster-identity`
+- `spoke-a` uses the shared spoke apps and local `cluster-identity`
+- raw collection is healthy for both `hub` and `spoke-a`
+- fresh targeted normalized snapshots were written for both clusters on `2026-03-31`
+- Qdrant contains live collections for both `kb_docs_hub` and `kb_docs_spoke-a`
+
+Known live issues:
+- `embedding-svc` is functional but slow enough that full reindex can stall or exceed operational expectations
+- Holmes `/api/chat` currently depends on `llm-proxy` model `openai/qwen3-coder-30b-a3b-instruct-mlx`
+- when `llm-proxy` returns upstream `504 Gateway Time-out`, Open WebUI `Holmes SRE Agent` fails even though direct `kb_tools.py search` still works
 
 ## Legacy Cutover State
 

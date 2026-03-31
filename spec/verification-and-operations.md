@@ -67,6 +67,10 @@ Expected log lines:
 - `Upserted ... docs to kb_docs_<cluster_id>`
 - `Wrote normalized/docs/<cluster_id>/.../docs.jsonl`
 
+Operational note:
+- on the current stand, `embedding-svc` is slow enough that the full cron job can lag badly
+- if this smoke test stalls, verify fresh `raw/...` first and then use a targeted manual reindex for the newest artifacts instead of waiting for the full backlog
+
 ### 6. Verify Qdrant
 
 Expected collections:
@@ -125,6 +129,10 @@ Minimum expectation:
 - Open WebUI shows the Pipe as a model
 - the answer is produced by HolmesGPT rather than the default LLM provider
 - a follow-up turn still makes sense without repeating the whole previous answer
+
+Current stand caveat:
+- Open WebUI can still fail here if HolmesGPT cannot get a completion from `llm-proxy`
+- this failure mode does not mean S3, Qdrant, or `kb_tools.py` retrieval is broken
 
 ## Direct Qdrant Validation
 
@@ -207,6 +215,7 @@ Check:
 - direct `kb_tools.py search`
 - Qdrant payload presence
 - `holmesgpt-configs` state
+- Holmes logs for `Toolset 'kb/stack' is invalid`; if present, verify that `kb-stack-toolset.yaml` includes a top-level `description`
 
 ### Open WebUI Pipe Fails
 
@@ -215,9 +224,11 @@ Typical causes:
 - Open WebUI cannot reach the in-cluster Holmes service DNS name
 - imported function code is outdated
 - HolmesGPT itself is unhealthy
+- HolmesGPT chat reaches `llm-proxy`, but the upstream model returns `504 Gateway Time-out`
 
 Check:
 - the function valves in Open WebUI
 - direct curl or browser reachability from the Open WebUI runtime network
 - `docs/open-webui-holmes-sre-agent.md`
 - direct HolmesGPT `/api/chat` behavior
+- `kubectl logs deploy/llm-proxy -n llm-proxy`
