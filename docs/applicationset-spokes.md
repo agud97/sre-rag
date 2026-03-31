@@ -37,15 +37,13 @@ At the moment the live inventory keeps only `spoke-a` active so the generated `A
 
 ## Current Scope
 
-This is a draft migration scaffold, not a full cutover yet.
-
-It intentionally does not remove:
-- `applications/spoke-a-sre-rag.yaml`
-- `applications/spoke-a-k8sgpt-scanner.yaml`
+`spoke-a` is now cut over to the `ApplicationSet` model for:
+- SRE exporters
+- `k8sgpt` scanner custom resource
 
 The `spoke-b` examples remain part of the legacy handwritten application model, but are not included in the new live `ApplicationSet` inventory until that cluster is actually registered in hub ArgoCD.
 
-It also intentionally does not replace the separate `k8sgpt` operator installation pattern yet.
+The repository still intentionally keeps the separate `k8sgpt` operator installation pattern.
 
 ## Next Migration Step
 
