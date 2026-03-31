@@ -24,6 +24,7 @@ data:
     QDRANT_ENDPOINT = os.environ["QDRANT_ENDPOINT"].rstrip("/")
     EMBEDDING_TIMEOUT_SECONDS = int(os.environ.get("EMBEDDING_TIMEOUT_SECONDS", "600"))
     EMBEDDING_BATCH_SIZE = int(os.environ.get("EMBEDDING_BATCH_SIZE", "16"))
+    MAX_DOC_TEXT_CHARS = int(os.environ.get("MAX_DOC_TEXT_CHARS", "20000"))
 
     if not S3_VERIFY_SSL:
       warnings.filterwarnings("ignore", category=InsecureRequestWarning)
@@ -70,7 +71,7 @@ data:
         return {"raw_text": body.decode("utf-8", "replace")}
 
     def doc_text(tool, cluster_id, timestamp, payload):
-      return json.dumps(
+      text = json.dumps(
         {
           "tool": tool,
           "cluster_id": cluster_id,
@@ -80,6 +81,12 @@ data:
         ensure_ascii=False,
         sort_keys=True,
       )
+      if len(text) > MAX_DOC_TEXT_CHARS:
+        text = (
+          text[:MAX_DOC_TEXT_CHARS]
+          + "\n...TRUNCATED_FOR_EMBEDDING..."
+        )
+      return text
 
     def docs_from_object(key, payload):
       meta = parse_key(key)
