@@ -10,9 +10,11 @@ data:
     import os
     import time
     import urllib.request
+    import warnings
     from collections import defaultdict
 
     import boto3
+    from urllib3.exceptions import InsecureRequestWarning
 
     S3_ENDPOINT = os.environ.get("S3_ENDPOINT", "")
     S3_REGION = os.environ.get("S3_REGION", "us-east-1")
@@ -20,6 +22,11 @@ data:
     S3_VERIFY_SSL = os.environ.get("S3_VERIFY_SSL", "false").lower() == "true"
     EMBEDDING_ENDPOINT = os.environ["EMBEDDING_ENDPOINT"].rstrip("/")
     QDRANT_ENDPOINT = os.environ["QDRANT_ENDPOINT"].rstrip("/")
+    EMBEDDING_TIMEOUT_SECONDS = int(os.environ.get("EMBEDDING_TIMEOUT_SECONDS", "600"))
+    EMBEDDING_BATCH_SIZE = int(os.environ.get("EMBEDDING_BATCH_SIZE", "16"))
+
+    if not S3_VERIFY_SSL:
+      warnings.filterwarnings("ignore", category=InsecureRequestWarning)
 
     def s3_client():
       kwargs = {"region_name": S3_REGION}
@@ -28,11 +35,11 @@ data:
       kwargs["verify"] = S3_VERIFY_SSL
       return boto3.client("s3", **kwargs)
 
-    def http_json(method, url, payload=None):
+    def http_json(method, url, payload=None, timeout=120):
       data = None if payload is None else json.dumps(payload).encode("utf-8")
       req = urllib.request.Request(url, data=data, method=method)
       req.add_header("Content-Type", "application/json")
-      with urllib.request.urlopen(req, timeout=120) as resp:
+      with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
     def list_raw_objects(client):
@@ -89,8 +96,17 @@ data:
       }]
 
     def embed_texts(texts):
-      data = http_json("POST", f"{EMBEDDING_ENDPOINT}/embed", {"texts": texts})
-      return data["vectors"]
+      vectors = []
+      for start in range(0, len(texts), EMBEDDING_BATCH_SIZE):
+        batch = texts[start:start + EMBEDDING_BATCH_SIZE]
+        data = http_json(
+          "POST",
+          f"{EMBEDDING_ENDPOINT}/embed",
+          {"texts": batch},
+          timeout=EMBEDDING_TIMEOUT_SECONDS,
+        )
+        vectors.extend(data["vectors"])
+      return vectors
 
     def ensure_collection(cluster_id, vector_size):
       name = f"kb_docs_{cluster_id}"
