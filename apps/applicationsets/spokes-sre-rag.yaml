@@ -19,7 +19,17 @@ spec:
       source:
         repoURL: https://github.com/agud97/sre-rag.git
         targetRevision: HEAD
-        path: 'overlays/{{ .overlay }}'
+        path: templates/spoke-exporters
+        kustomize:
+          patches:
+            - target:
+                kind: ConfigMap
+                name: sre-rag-config
+                namespace: sre-exporters
+              patch: |-
+                - op: replace
+                  path: /data/CLUSTER_ID
+                  value: {{ .cluster_id | quote }}
       destination:
         name: '{{ .argo_cluster }}'
       syncPolicy:

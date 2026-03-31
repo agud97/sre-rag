@@ -47,10 +47,13 @@ The implementation is split into three layers:
   Hub-specific `ConfigMap` values for exporters and system components.
 
 - `overlays/spoke-a/`
-  Spoke A config with `CLUSTER_ID=spoke-a`.
+  Legacy static spoke overlay kept only as an example during migration.
 
 - `overlays/spoke-b/`
-  Template for the next spoke cluster.
+  Legacy static spoke overlay template.
+
+- `templates/spoke-exporters/`
+  Shared exporters template consumed by the spoke `ApplicationSet`.
 
 ## Exporters
 
@@ -179,7 +182,7 @@ The table below shows where each ArgoCD application reads its desired state from
 | Application | Source type | Config source | What it renders | Runtime config dependencies |
 | --- | --- | --- | --- | --- |
 | `hub-sre-rag` | Git | `overlays/hub` | hub exporters plus hub services | overlay-local `cluster-config-exporters.yaml` and `cluster-config-system.yaml` |
-| `spoke-a-sre-rag` | ApplicationSet-generated Git app | `overlays/spoke-a` | spoke exporters | inventory from `clusters/spokes/spoke-a.yaml` plus overlay-local `cluster-config.yaml` |
+| `spoke-a-sre-rag` | ApplicationSet-generated Git app | `templates/spoke-exporters` | spoke exporters | inventory from `clusters/spokes/spoke-a.yaml`; `CLUSTER_ID` patched from inventory |
 | `spoke-b-sre-rag` | Git | `overlays/spoke-b` | spoke exporters template | overlay-local `cluster-config.yaml` |
 | `holmesgpt-configs` | Git | `base/hub/holmesgpt-toolset` | HolmesGPT toolset ConfigMaps and secret stub | provides `kb-stack-toolset`, runbooks, `sre-rag-config`, and `s3-credentials-normalizer` |
 | `holmesgpt` | Helm | chart `holmes` from `https://robusta-charts.storage.googleapis.com`, version `0.19.0` | HolmesGPT deployment | values are embedded in `applications/hub-holmesgpt.yaml`; reads `sre-rag-config`, `s3-credentials-normalizer`, `custom-runbooks`, `sre-runbooks`, `kb-stack-toolset` at runtime |
@@ -191,7 +194,7 @@ The table below shows where each ArgoCD application reads its desired state from
 How the Git-backed apps expand:
 
 - `overlays/hub` includes `base/exporters`, `base/hub`, `cluster-config-exporters.yaml`, and `cluster-config-system.yaml`
-- `overlays/spoke-a` includes `base/exporters` and `cluster-config.yaml`
+- `templates/spoke-exporters` includes `base/exporters` and a shared exporters `cluster-config.yaml`
 - `overlays/spoke-b` includes `base/exporters` and `cluster-config.yaml`
 - `base/hub/holmesgpt-toolset` contains the HolmesGPT toolset and supporting ConfigMaps
 - `base/k8sgpt-scanner` contains the shared scanner manifest used by spoke apps
@@ -221,7 +224,7 @@ This draft model keeps exporters and `k8sgpt` scanner generation separate on pur
 - scanner rollout depends on the `k8sgpt` operator already existing
 - separating them reduces rollout coupling and keeps rollback narrower
 
-`spoke-a` is already cut over to the generated `ApplicationSet` applications. The remaining handwritten `applications/spoke-*.yaml` files are legacy examples for non-migrated spoke definitions such as `spoke-b`.
+`spoke-a` is already cut over to the generated `ApplicationSet` applications and no longer needs a handwritten exporters overlay in the generated path. The remaining handwritten `applications/spoke-*.yaml` and `overlays/spoke-*` files are legacy examples for non-migrated spoke definitions such as `spoke-b`.
 
 To keep the draft deployable on the current experimental stand, only spoke clusters that are actually registered in hub ArgoCD should be present under `clusters/spokes/`.
 

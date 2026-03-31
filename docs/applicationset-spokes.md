@@ -22,7 +22,6 @@ Each spoke inventory file currently contains:
 - `name`
 - `cluster_id`
 - `argo_cluster`
-- `overlay`
 
 Current examples:
 - `clusters/spokes/spoke-a.yaml`
@@ -33,7 +32,7 @@ At the moment the live inventory keeps only `spoke-a` active so the generated `A
 
 `argo_cluster` is the ArgoCD destination cluster name as registered in the ArgoCD cluster secret.
 
-`overlay` currently still points to a per-spoke Kustomize overlay.
+The exporters `ApplicationSet` now renders a shared template from `templates/spoke-exporters` and patches `CLUSTER_ID` from inventory, so a new spoke no longer needs its own exporters overlay.
 
 ## Current Scope
 
@@ -48,6 +47,6 @@ The repository still intentionally keeps the separate `k8sgpt` operator installa
 ## Next Migration Step
 
 For a real `100+` spoke rollout, the next useful simplification would be:
-- replace per-spoke overlays with a parameterized shared spoke template
 - keep `clusters/spokes/*.yaml` as the inventory
 - let `ApplicationSet` drive all generated spoke applications from that inventory
+- extend the inventory with per-cluster values only when a spoke genuinely differs from the shared exporters template
