@@ -1,4 +1,0 @@
-name: spoke-b
-cluster_id: spoke-b
-argo_cluster: spoke-b
-overlay: spoke-b

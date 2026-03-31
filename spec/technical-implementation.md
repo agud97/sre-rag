@@ -216,7 +216,6 @@ Those `ApplicationSet` resources read inventory files from:
 Current inventory examples:
 
 - `clusters/spokes/spoke-a.yaml`
-- `clusters/spokes/spoke-b.yaml`
 
 This draft model keeps exporters and `k8sgpt` scanner generation separate on purpose:
 
@@ -225,6 +224,8 @@ This draft model keeps exporters and `k8sgpt` scanner generation separate on pur
 - separating them reduces rollout coupling and keeps rollback narrower
 
 The draft does not yet remove the existing handwritten `applications/spoke-*.yaml` files. It is intended as the migration target for a future cutover to a central multi-cluster ArgoCD model.
+
+To keep the draft deployable on the current experimental stand, only spoke clusters that are actually registered in hub ArgoCD should be present under `clusters/spokes/`.
 
 ## Legacy Cutover State
 

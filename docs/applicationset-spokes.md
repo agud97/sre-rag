@@ -26,7 +26,10 @@ Each spoke inventory file currently contains:
 
 Current examples:
 - `clusters/spokes/spoke-a.yaml`
-- `clusters/spokes/spoke-b.yaml`
+
+Only clusters with a real ArgoCD destination registration should exist in `clusters/spokes/`.
+
+At the moment the live inventory keeps only `spoke-a` active so the generated `ApplicationSet` resources stay deployable on the current experimental stand.
 
 `argo_cluster` is the ArgoCD destination cluster name as registered in the ArgoCD cluster secret.
 
@@ -38,9 +41,9 @@ This is a draft migration scaffold, not a full cutover yet.
 
 It intentionally does not remove:
 - `applications/spoke-a-sre-rag.yaml`
-- `applications/spoke-b-sre-rag.yaml`
 - `applications/spoke-a-k8sgpt-scanner.yaml`
-- `applications/spoke-b-k8sgpt-scanner.yaml`
+
+The `spoke-b` examples remain part of the legacy handwritten application model, but are not included in the new live `ApplicationSet` inventory until that cluster is actually registered in hub ArgoCD.
 
 It also intentionally does not replace the separate `k8sgpt` operator installation pattern yet.
 
