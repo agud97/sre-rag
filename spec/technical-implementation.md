@@ -24,6 +24,11 @@ The implementation is split into three layers:
 4. Open WebUI integration
 - optional Pipe Function exposes HolmesGPT as a selectable model in the Open WebUI chat interface
 
+5. Multi-spoke delivery model
+- current repo still contains static per-spoke `Application` manifests
+- draft `ApplicationSet` scaffolding is added under `apps/applicationsets/`
+- spoke inventory for generated apps is stored under `clusters/spokes/*.yaml`
+
 ## Repository Structure
 
 - `applications/`
@@ -196,6 +201,30 @@ How the Git-backed apps expand:
 Important caveat:
 
 - `applications/spoke-a-k8sgpt.yaml` and `applications/spoke-b-k8sgpt.yaml` both declare the ArgoCD application name `k8sgpt`; they are intended for different ArgoCD instances or different rollout contexts and would conflict if applied into the same ArgoCD namespace unchanged
+
+### ApplicationSet Draft For Many Spokes
+
+For larger spoke counts, the repository now also contains draft `ApplicationSet` manifests:
+
+- `apps/applicationsets/spokes-sre-rag.yaml`
+- `apps/applicationsets/spokes-k8sgpt-scanner.yaml`
+
+Those `ApplicationSet` resources read inventory files from:
+
+- `clusters/spokes/*.yaml`
+
+Current inventory examples:
+
+- `clusters/spokes/spoke-a.yaml`
+- `clusters/spokes/spoke-b.yaml`
+
+This draft model keeps exporters and `k8sgpt` scanner generation separate on purpose:
+
+- exporters and scanner resources have different runtime dependencies
+- scanner rollout depends on the `k8sgpt` operator already existing
+- separating them reduces rollout coupling and keeps rollback narrower
+
+The draft does not yet remove the existing handwritten `applications/spoke-*.yaml` files. It is intended as the migration target for a future cutover to a central multi-cluster ArgoCD model.
 
 ## Legacy Cutover State
 

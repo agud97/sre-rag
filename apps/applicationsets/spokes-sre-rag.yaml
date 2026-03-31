@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: spokes-sre-rag
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: https://github.com/agud97/sre-rag.git
+        revision: HEAD
+        files:
+          - path: clusters/spokes/*.yaml
+  template:
+    metadata:
+      name: '{{ .name }}-sre-rag'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/agud97/sre-rag.git
+        targetRevision: HEAD
+        path: 'overlays/{{ .overlay }}'
+      destination:
+        name: '{{ .argo_cluster }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - RespectIgnoreDifferences=true
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          name: s3-credentials
+          jsonPointers: [/data, /stringData]

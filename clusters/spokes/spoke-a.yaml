@@ -1,0 +1,4 @@
+name: spoke-a
+cluster_id: spoke-a
+argo_cluster: spoke-a
+overlay: spoke-a
