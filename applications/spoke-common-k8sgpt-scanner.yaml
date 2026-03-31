@@ -1,17 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: k8sgpt
+  name: k8sgpt-scanner
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://charts.k8sgpt.ai/
-    chart: k8sgpt-operator
-    targetRevision: "*"
-    helm:
-      values: |
-        # Operator only — K8sGPT CR deployed separately (spoke-b-k8sgpt-scanner)
+    repoURL: https://github.com/agud97/sre-rag.git
+    targetRevision: HEAD
+    path: base/k8sgpt-scanner
   destination:
     server: https://kubernetes.default.svc
     namespace: k8sgpt-operator-system

@@ -16,15 +16,17 @@ Namespaces:
 ### Exporters
 
 Required in `sre-exporters/sre-rag-config`:
-- `CLUSTER_ID`
 - `S3_ENDPOINT`
 - `S3_BUCKET`
 - `S3_REGION`
 - `S3_VERIFY_SSL`
 
 Examples:
-- hub overlay sets `CLUSTER_ID=hub`
-- spoke ArgoCD apps patch the shared `templates/spoke-exporters` config with cluster-specific `CLUSTER_ID` values such as `spoke-a`
+- hub overlay keeps `CLUSTER_ID=hub`
+- spoke exporters read `CLUSTER_ID` from `sre-exporters/cluster-identity`
+
+Required in `sre-exporters/cluster-identity`:
+- `CLUSTER_ID`
 
 ### Normalizer
 

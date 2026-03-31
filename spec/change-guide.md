@@ -27,17 +27,16 @@ Needs extra care:
 
 ## How To Add A New Spoke
 
-1. Copy `applications/spoke-a-sre-rag.yaml` to `applications/<new-name>-sre-rag.yaml`.
-2. Set the inline ArgoCD Kustomize patch for `CLUSTER_ID` to the desired stable identifier.
-3. Create:
-- `applications/<new-name>-k8sgpt.yaml`
-- `applications/<new-name>-k8sgpt-scanner.yaml`
-- `applications/<new-name>-sre-rag.yaml`
-4. Create `s3-credentials` in `sre-exporters` in that cluster.
-5. Sync `k8sgpt` operator, then scanner, then `sre-rag`.
-6. Trigger at least one exporter job manually.
-7. Run the hub normalizer.
-8. Confirm a new Qdrant collection `kb_docs_<new-name>` appears.
+1. Apply `templates/cluster-identity.yaml` in the spoke cluster and set `CLUSTER_ID` to the desired stable identifier.
+2. Apply:
+- `applications/spoke-common-k8sgpt.yaml`
+- `applications/spoke-common-k8sgpt-scanner.yaml`
+- `applications/spoke-common-sre-rag.yaml`
+3. Create `s3-credentials` in `sre-exporters` in that cluster.
+4. Sync `k8sgpt` operator, then scanner, then `sre-rag`.
+5. Trigger at least one exporter job manually.
+6. Run the hub normalizer.
+7. Confirm a new Qdrant collection `kb_docs_<new-name>` appears.
 
 ## How To Change Cluster Identity
 

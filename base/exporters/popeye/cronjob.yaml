@@ -37,6 +37,8 @@ spec:
               envFrom:
                 - configMapRef:
                     name: sre-rag-config
+                - configMapRef:
+                    name: cluster-identity
               env:
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:

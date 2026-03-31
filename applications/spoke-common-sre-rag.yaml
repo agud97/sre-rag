@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: spoke-a-sre-rag
+  name: sre-rag
   namespace: argocd
 spec:
   project: default
@@ -9,16 +9,6 @@ spec:
     repoURL: https://github.com/agud97/sre-rag.git
     targetRevision: HEAD
     path: templates/spoke-exporters
-    kustomize:
-      patches:
-        - target:
-            kind: ConfigMap
-            name: sre-rag-config
-            namespace: sre-exporters
-          patch: |-
-            - op: replace
-              path: /data/CLUSTER_ID
-              value: "spoke-a"
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:

@@ -47,7 +47,10 @@ The implementation is split into three layers:
   Hub-specific `ConfigMap` values for exporters and system components.
 
 - `templates/spoke-exporters/`
-  Shared spoke exporter template. `CLUSTER_ID` is patched per ArgoCD `Application`.
+  Shared spoke exporter template. Runtime S3 config is shared across all spokes.
+
+- `templates/cluster-identity.yaml`
+  Shared cluster identity manifest template. Each spoke applies its own `CLUSTER_ID` locally.
 
 ## Exporters
 
@@ -165,11 +168,9 @@ Hub:
 - `applications/hub-holmesgpt-configs.yaml`
 
 Spoke:
-- `applications/spoke-a-k8sgpt.yaml`
-- `applications/spoke-a-k8sgpt-scanner.yaml`
-- `applications/spoke-a-sre-rag.yaml`
-
-The same pattern exists for `spoke-b` as a template.
+- `applications/spoke-common-k8sgpt.yaml`
+- `applications/spoke-common-k8sgpt-scanner.yaml`
+- `applications/spoke-common-sre-rag.yaml`
 
 ### ArgoCD Configuration Map
 
@@ -178,33 +179,33 @@ The table below shows where each ArgoCD application reads its desired state from
 | Application | Source type | Config source | What it renders | Runtime config dependencies |
 | --- | --- | --- | --- | --- |
 | `hub-sre-rag` | Git | `overlays/hub` | hub exporters plus hub services | overlay-local `cluster-config-exporters.yaml` and `cluster-config-system.yaml` |
-| `spoke-a-sre-rag` | Git | `templates/spoke-exporters` | spoke exporters | inline ArgoCD Kustomize patch sets `CLUSTER_ID=spoke-a` |
-| `spoke-b-sre-rag` | Git | `templates/spoke-exporters` | spoke exporters | inline ArgoCD Kustomize patch sets `CLUSTER_ID=spoke-b` |
+| `sre-rag` | Git | `templates/spoke-exporters` | spoke exporters | requires local `cluster-identity` ConfigMap plus `s3-credentials` |
 | `holmesgpt-configs` | Git | `base/hub/holmesgpt-toolset` | HolmesGPT toolset ConfigMaps and secret stub | provides `kb-stack-toolset`, runbooks, `sre-rag-config`, and `s3-credentials-normalizer` |
 | `holmesgpt` | Helm | chart `holmes` from `https://robusta-charts.storage.googleapis.com`, version `0.19.0` | HolmesGPT deployment | values are embedded in `applications/hub-holmesgpt.yaml`; reads `sre-rag-config`, `s3-credentials-normalizer`, `custom-runbooks`, `sre-runbooks`, `kb-stack-toolset` at runtime |
 | `qdrant` | Helm | chart `qdrant` from `https://qdrant.github.io/qdrant-helm`, version `0.10.1` | Qdrant StatefulSet and service | values are embedded in `applications/hub-qdrant.yaml` |
-| `k8sgpt` | Helm | chart `k8sgpt-operator` from `https://charts.k8sgpt.ai/` | K8sGPT operator | values are embedded in `applications/spoke-a-k8sgpt.yaml` and `applications/spoke-b-k8sgpt.yaml` |
-| `spoke-a-k8sgpt-scanner` | Git | `base/k8sgpt-scanner` | `K8sGPT` scanner custom resource | depends on the `k8sgpt` operator app already being present |
-| `spoke-b-k8sgpt-scanner` | Git | `base/k8sgpt-scanner` | `K8sGPT` scanner custom resource | depends on the `k8sgpt` operator app already being present |
+| `k8sgpt` | Helm | chart `k8sgpt-operator` from `https://charts.k8sgpt.ai/` | K8sGPT operator | values are embedded in `applications/spoke-common-k8sgpt.yaml` |
+| `k8sgpt-scanner` | Git | `base/k8sgpt-scanner` | `K8sGPT` scanner custom resource | depends on the `k8sgpt` operator app already being present |
 
 How the Git-backed apps expand:
 
 - `overlays/hub` includes `base/exporters`, `base/hub`, `cluster-config-exporters.yaml`, and `cluster-config-system.yaml`
 - `templates/spoke-exporters` includes `base/exporters` and the shared `cluster-config.yaml`
+- `templates/cluster-identity.yaml` is applied locally in each spoke cluster before the shared apps
 - `base/hub/holmesgpt-toolset` contains the HolmesGPT toolset and supporting ConfigMaps
 - `base/k8sgpt-scanner` contains the shared scanner manifest used by spoke apps
 
 Important caveat:
 
-- `applications/spoke-a-k8sgpt.yaml` and `applications/spoke-b-k8sgpt.yaml` both declare the ArgoCD application name `k8sgpt`; they are intended for different ArgoCD instances or different rollout contexts and would conflict if applied into the same ArgoCD namespace unchanged
+- the shared spoke app names assume one ArgoCD instance per spoke cluster; they are not intended to be applied into a single shared ArgoCD namespace across many clusters
 
 ### Per-Spoke ArgoCD Model
 
 The active rollout model is:
 
 - each spoke cluster runs its own ArgoCD
-- that local ArgoCD applies `applications/<spoke>-*.yaml`
-- the spoke exporter app points to `templates/spoke-exporters` and patches `CLUSTER_ID` inline
+- that local ArgoCD applies the same three shared `applications/spoke-common-*.yaml` manifests
+- each spoke cluster applies its own local `cluster-identity` ConfigMap
+- the spoke exporter app points to `templates/spoke-exporters`
 - the scanner app points to `base/k8sgpt-scanner`
 
 This keeps spoke rollout isolated per cluster and avoids hub-side remote-cluster registration.
