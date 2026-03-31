@@ -22,7 +22,7 @@ Required in `sre-exporters/sre-rag-config`:
 - `S3_VERIFY_SSL`
 
 Examples:
-- hub overlay keeps `CLUSTER_ID=hub`
+- hub exporters read `CLUSTER_ID=hub` from `sre-exporters/cluster-identity`
 - spoke exporters read `CLUSTER_ID` from `sre-exporters/cluster-identity`
 
 Required in `sre-exporters/cluster-identity`:

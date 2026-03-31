@@ -5,4 +5,5 @@ resources:
   - ../../base/exporters
   - ../../base/hub
   - cluster-config-exporters.yaml
+  - cluster-identity-exporters.yaml
   - cluster-config-system.yaml

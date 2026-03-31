@@ -189,6 +189,7 @@ The table below shows where each ArgoCD application reads its desired state from
 How the Git-backed apps expand:
 
 - `overlays/hub` includes `base/exporters`, `base/hub`, `cluster-config-exporters.yaml`, and `cluster-config-system.yaml`
+- `overlays/hub` also applies `cluster-identity-exporters.yaml` so hub exporters follow the same `cluster-identity` contract as spoke exporters
 - `templates/spoke-exporters` includes `base/exporters` and the shared `cluster-config.yaml`
 - `templates/cluster-identity.yaml` is applied locally in each spoke cluster before the shared apps
 - `base/hub/holmesgpt-toolset` contains the HolmesGPT toolset and supporting ConfigMaps
