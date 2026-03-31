@@ -8,7 +8,17 @@ spec:
   source:
     repoURL: https://github.com/agud97/sre-rag.git
     targetRevision: HEAD
-    path: overlays/spoke-b
+    path: templates/spoke-exporters
+    kustomize:
+      patches:
+        - target:
+            kind: ConfigMap
+            name: sre-rag-config
+            namespace: sre-exporters
+          patch: |-
+            - op: replace
+              path: /data/CLUSTER_ID
+              value: "spoke-b"
   destination:
     server: https://kubernetes.default.svc
   syncPolicy:

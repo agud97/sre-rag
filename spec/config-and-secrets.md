@@ -24,7 +24,7 @@ Required in `sre-exporters/sre-rag-config`:
 
 Examples:
 - hub overlay sets `CLUSTER_ID=hub`
-- spoke-a overlay sets `CLUSTER_ID=spoke-a`
+- spoke ArgoCD apps patch the shared `templates/spoke-exporters` config with cluster-specific `CLUSTER_ID` values such as `spoke-a`
 
 ### Normalizer
 

@@ -9,11 +9,18 @@ In this model:
 
 ## 1. Prepare The Overlay
 
-Ensure `overlays/spoke-b/cluster-config.yaml` contains the correct cluster identity:
+Ensure `applications/spoke-b-sre-rag.yaml` patches the shared spoke template with the correct cluster identity:
 
 ```yaml
-data:
-  CLUSTER_ID: "spoke-b"
+spec:
+  source:
+    path: templates/spoke-exporters
+    kustomize:
+      patches:
+        - patch: |-
+            - op: replace
+              path: /data/CLUSTER_ID
+              value: "spoke-b"
 ```
 
 ## 2. Prepare The Spoke ArgoCD Apps

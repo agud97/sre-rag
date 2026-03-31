@@ -11,7 +11,7 @@
 ## Safe Change Areas
 
 Usually safe:
-- adding a new spoke overlay
+- adding a new spoke application set based on the shared spoke template
 - adjusting schedules
 - updating exporter images
 - extending HolmesGPT tools
@@ -27,8 +27,8 @@ Needs extra care:
 
 ## How To Add A New Spoke
 
-1. Copy `overlays/spoke-a` to `overlays/<new-name>`.
-2. Set `CLUSTER_ID` to the desired stable identifier.
+1. Copy `applications/spoke-a-sre-rag.yaml` to `applications/<new-name>-sre-rag.yaml`.
+2. Set the inline ArgoCD Kustomize patch for `CLUSTER_ID` to the desired stable identifier.
 3. Create:
 - `applications/<new-name>-k8sgpt.yaml`
 - `applications/<new-name>-k8sgpt-scanner.yaml`

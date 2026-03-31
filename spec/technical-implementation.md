@@ -46,11 +46,8 @@ The implementation is split into three layers:
 - `overlays/hub/`
   Hub-specific `ConfigMap` values for exporters and system components.
 
-- `overlays/spoke-a/`
-  Spoke A config with `CLUSTER_ID=spoke-a`.
-
-- `overlays/spoke-b/`
-  Template for the next spoke cluster.
+- `templates/spoke-exporters/`
+  Shared spoke exporter template. `CLUSTER_ID` is patched per ArgoCD `Application`.
 
 ## Exporters
 
@@ -181,8 +178,8 @@ The table below shows where each ArgoCD application reads its desired state from
 | Application | Source type | Config source | What it renders | Runtime config dependencies |
 | --- | --- | --- | --- | --- |
 | `hub-sre-rag` | Git | `overlays/hub` | hub exporters plus hub services | overlay-local `cluster-config-exporters.yaml` and `cluster-config-system.yaml` |
-| `spoke-a-sre-rag` | Git | `overlays/spoke-a` | spoke exporters | overlay-local `cluster-config.yaml` |
-| `spoke-b-sre-rag` | Git | `overlays/spoke-b` | spoke exporters template | overlay-local `cluster-config.yaml` |
+| `spoke-a-sre-rag` | Git | `templates/spoke-exporters` | spoke exporters | inline ArgoCD Kustomize patch sets `CLUSTER_ID=spoke-a` |
+| `spoke-b-sre-rag` | Git | `templates/spoke-exporters` | spoke exporters | inline ArgoCD Kustomize patch sets `CLUSTER_ID=spoke-b` |
 | `holmesgpt-configs` | Git | `base/hub/holmesgpt-toolset` | HolmesGPT toolset ConfigMaps and secret stub | provides `kb-stack-toolset`, runbooks, `sre-rag-config`, and `s3-credentials-normalizer` |
 | `holmesgpt` | Helm | chart `holmes` from `https://robusta-charts.storage.googleapis.com`, version `0.19.0` | HolmesGPT deployment | values are embedded in `applications/hub-holmesgpt.yaml`; reads `sre-rag-config`, `s3-credentials-normalizer`, `custom-runbooks`, `sre-runbooks`, `kb-stack-toolset` at runtime |
 | `qdrant` | Helm | chart `qdrant` from `https://qdrant.github.io/qdrant-helm`, version `0.10.1` | Qdrant StatefulSet and service | values are embedded in `applications/hub-qdrant.yaml` |
@@ -193,8 +190,7 @@ The table below shows where each ArgoCD application reads its desired state from
 How the Git-backed apps expand:
 
 - `overlays/hub` includes `base/exporters`, `base/hub`, `cluster-config-exporters.yaml`, and `cluster-config-system.yaml`
-- `overlays/spoke-a` includes `base/exporters` and `cluster-config.yaml`
-- `overlays/spoke-b` includes `base/exporters` and `cluster-config.yaml`
+- `templates/spoke-exporters` includes `base/exporters` and the shared `cluster-config.yaml`
 - `base/hub/holmesgpt-toolset` contains the HolmesGPT toolset and supporting ConfigMaps
 - `base/k8sgpt-scanner` contains the shared scanner manifest used by spoke apps
 
@@ -208,7 +204,8 @@ The active rollout model is:
 
 - each spoke cluster runs its own ArgoCD
 - that local ArgoCD applies `applications/<spoke>-*.yaml`
-- the spoke app points to `overlays/<spoke>` for exporters and `base/k8sgpt-scanner` for the scanner custom resource
+- the spoke exporter app points to `templates/spoke-exporters` and patches `CLUSTER_ID` inline
+- the scanner app points to `base/k8sgpt-scanner`
 
 This keeps spoke rollout isolated per cluster and avoids hub-side remote-cluster registration.
 

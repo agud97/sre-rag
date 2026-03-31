@@ -4,7 +4,7 @@ metadata:
   name: sre-rag-config
   namespace: sre-exporters
 data:
-  CLUSTER_ID: "spoke-a"
+  CLUSTER_ID: "REPLACE_ME"
   S3_ENDPOINT: "https://s3.regru.cloud"
   S3_BUCKET: "sre-rag"
   S3_REGION: "us-east-1"

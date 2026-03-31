@@ -2,8 +2,8 @@
 
 Per-spoke ArgoCD model:
 
-1. Copy `overlays/spoke-a` to `overlays/<new-spoke>`.
-2. Change `CLUSTER_ID` in the new overlay config.
+1. Copy `applications/spoke-a-sre-rag.yaml` to `applications/<new-spoke>-sre-rag.yaml`.
+2. Change the inline `source.kustomize.patches` value for `CLUSTER_ID`.
 3. Create:
 - `applications/<new-spoke>-k8sgpt.yaml`
 - `applications/<new-spoke>-k8sgpt-scanner.yaml`
