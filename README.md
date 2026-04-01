@@ -33,7 +33,7 @@ Current operational caveats:
 - raw data collection from `hub` and `spoke-a` is healthy
 - Qdrant retrieval works for `hub` and `spoke-a`
 - full hourly `normalizer` can lag because `embedding-svc` is slow on CPU; targeted manual reindex may be needed during incidents
-- Open WebUI depends on HolmesGPT, and HolmesGPT currently depends on `llm-proxy`; if the upstream LLM is timing out, the Pipe model will fail even when S3, normalizer, and Qdrant are healthy
+- Open WebUI depends on HolmesGPT, and HolmesGPT currently depends on an external LiteLLM endpoint at `http://89.111.168.161:32080/v1`; if that upstream LLM path is timing out, the Pipe model will fail even when S3, normalizer, and Qdrant are healthy
 
 Start with:
 - `spec/README.md`

@@ -119,7 +119,7 @@ What happens under the hood:
 
 Current operational note:
 - direct retrieval for `hub` and `spoke-a` is validated
-- if the downstream `llm-proxy` model is timing out, the Open WebUI model can fail with a Holmes `500` even when the underlying indexed data is present
+- if the downstream LiteLLM model path is timing out, the Open WebUI model can fail with a Holmes `500` even when the underlying indexed data is present
 
 Recommended question style in Open WebUI:
 - `Какие самые важные security issues сейчас есть в spoke-a?`
@@ -153,7 +153,7 @@ If you need the original machine-readable artifact, use `key`.
 - there is no first-class `list_clusters` command yet
 - default search without `cluster_id` uses the hub collection
 - repeated results can appear because one artifact can produce multiple indexed points
-- Open WebUI chat depends on HolmesGPT chat, which in turn depends on the external `llm-proxy` model; retrieval can be healthy while chat generation is temporarily unavailable
+- Open WebUI chat depends on HolmesGPT chat, which in turn depends on the external LiteLLM model path at `http://89.111.168.161:32080/v1`; retrieval can be healthy while chat generation is temporarily unavailable
 
 ## What To Report If Something Looks Wrong
 

@@ -131,7 +131,7 @@ Minimum expectation:
 - a follow-up turn still makes sense without repeating the whole previous answer
 
 Current stand caveat:
-- Open WebUI can still fail here if HolmesGPT cannot get a completion from `llm-proxy`
+- Open WebUI can still fail here if HolmesGPT cannot get a completion from the external LiteLLM endpoint
 - this failure mode does not mean S3, Qdrant, or `kb_tools.py` retrieval is broken
 
 ## Direct Qdrant Validation
@@ -224,11 +224,11 @@ Typical causes:
 - Open WebUI cannot reach the in-cluster Holmes service DNS name
 - imported function code is outdated
 - HolmesGPT itself is unhealthy
-- HolmesGPT chat reaches `llm-proxy`, but the upstream model returns `504 Gateway Time-out`
+- HolmesGPT chat reaches the external LiteLLM endpoint, but the upstream model returns an error or timeout
 
 Check:
 - the function valves in Open WebUI
 - direct curl or browser reachability from the Open WebUI runtime network
 - `docs/open-webui-holmes-sre-agent.md`
 - direct HolmesGPT `/api/chat` behavior
-- `kubectl logs deploy/llm-proxy -n llm-proxy`
+- the configured LiteLLM endpoint response to `/v1/chat/completions`

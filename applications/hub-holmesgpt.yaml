@@ -13,11 +13,11 @@ spec:
       values: |
         additionalEnvVars:
           - name: MODEL
-            value: "openai/qwen3-coder-30b-a3b-instruct-mlx"
+            value: "minimax-m25"
           - name: OPENAI_API_BASE
-            value: "http://llm-proxy.llm-proxy.svc.cluster.local:8080/v1"
+            value: "http://89.111.168.161:32080/v1"
           - name: OPENAI_API_KEY
-            value: "not-needed"
+            value: "6eedf0a5927e06569b11d6c51c29d950da4a69d0f7061ac8"
           - name: AWS_ENDPOINT_URL
             valueFrom:
               configMapKeyRef:

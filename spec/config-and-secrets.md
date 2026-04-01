@@ -54,9 +54,10 @@ Required in `holmesgpt/sre-rag-config`:
 - `EMBEDDING_QUERY_INSTRUCTION`
 
 Additional Holmes runtime dependency outside this `ConfigMap`:
-- `MODEL` is currently set in `applications/hub-holmesgpt.yaml` to `openai/qwen3-coder-30b-a3b-instruct-mlx`
-- `OPENAI_API_BASE` is currently `http://llm-proxy.llm-proxy.svc.cluster.local:8080/v1`
-- if `llm-proxy` or its upstream model is unavailable, Open WebUI and Holmes chat fail even when retrieval data is present
+- `MODEL` is currently set in `applications/hub-holmesgpt.yaml` to `minimax-m25`
+- `OPENAI_API_BASE` is currently `http://89.111.168.161:32080/v1`
+- `OPENAI_API_KEY` is currently provided directly in `applications/hub-holmesgpt.yaml` as a bearer token for the external LiteLLM endpoint
+- if the external LiteLLM endpoint or its upstream model is unavailable, Open WebUI and Holmes chat fail even when retrieval data is present
 
 ## Secret Model
 

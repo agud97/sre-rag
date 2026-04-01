@@ -113,12 +113,12 @@ This was fixed in:
 ### 4. Current Chat Blocker Is External LLM Availability
 
 Current Holmes model config:
-- `MODEL=openai/qwen3-coder-30b-a3b-instruct-mlx`
-- `OPENAI_API_BASE=http://llm-proxy.llm-proxy.svc.cluster.local:8080/v1`
+- `MODEL=minimax-m25`
+- `OPENAI_API_BASE=http://89.111.168.161:32080/v1`
 
 Observed live failure:
-- Holmes `/api/chat` reaches `llm-proxy`
-- `llm-proxy` returns upstream `504 Gateway Time-out`
+- Holmes `/api/chat` reaches the external LiteLLM endpoint
+- the external LiteLLM endpoint or its upstream model can still fail independently of retrieval
 - Open WebUI `Holmes SRE Agent` therefore fails even when retrieval data is healthy
 
 Meaning:
@@ -149,9 +149,12 @@ KUBECONFIG=/root/proj/cross/kubeconfig_6005021 kubectl -n holmesgpt exec deploy/
 KUBECONFIG=/root/proj/cross/kubeconfig_6005021 kubectl -n holmesgpt exec deploy/holmesgpt-holmes -- python3 /kb-scripts/kb_tools.py search kubescape 5 spoke-a
 ```
 
-Check llm-proxy logs:
+Check external LiteLLM directly:
 ```bash
-KUBECONFIG=/root/proj/cross/kubeconfig_6005021 kubectl -n llm-proxy logs deploy/llm-proxy --tail=200
+curl -sS http://89.111.168.161:32080/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer 6eedf0a5927e06569b11d6c51c29d950da4a69d0f7061ac8' \
+  -d '{"model":"minimax-m25","messages":[{"role":"user","content":"ping"}]}' | jq
 ```
 
 ## Git And Credentials
@@ -182,4 +185,4 @@ git push origin main
 
 - `open-webui/functions/__pycache__/` is untracked local junk
 - spoke legacy overlays can remain for reference, but should not be described as active rollout
-- if Holmes chat is required, fix or replace the current `llm-proxy` upstream model before debugging Open WebUI again
+- if Holmes chat is required, verify the external LiteLLM endpoint and its upstream model before debugging Open WebUI again

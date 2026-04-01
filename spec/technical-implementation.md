@@ -233,8 +233,8 @@ Validated on the stand:
 
 Known live issues:
 - `embedding-svc` is functional but slow enough that full reindex can stall or exceed operational expectations
-- Holmes `/api/chat` currently depends on `llm-proxy` model `openai/qwen3-coder-30b-a3b-instruct-mlx`
-- when `llm-proxy` returns upstream `504 Gateway Time-out`, Open WebUI `Holmes SRE Agent` fails even though direct `kb_tools.py search` still works
+- Holmes `/api/chat` currently depends on the external LiteLLM endpoint `http://89.111.168.161:32080/v1` with model `minimax-m25`
+- if that LiteLLM endpoint or its upstream model returns errors or times out, Open WebUI `Holmes SRE Agent` fails even though direct `kb_tools.py search` still works
 
 ## Legacy Cutover State
 
