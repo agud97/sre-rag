@@ -14,10 +14,7 @@
     "source": {
       "path": "legacy-src/platform/authentik",
       "repoURL": "https://github.com/agud97/sre-rag.git",
-      "targetRevision": "HEAD",
-      "kustomize": {
-        "buildOptions": "--enable-helm"
-      }
+      "targetRevision": "HEAD"
     },
     "syncPolicy": {
       "automated": {
