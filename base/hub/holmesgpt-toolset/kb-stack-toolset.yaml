@@ -7,12 +7,19 @@ data:
   kb-stack-toolset.yaml: |
     name: kb/stack
     description: Search and fetch SRE RAG knowledge base documents from Qdrant and S3.
+    llm_instructions: |
+      Use this toolset for knowledge-base retrieval against the SRE RAG store.
+      Use `kb_search` to find relevant stored findings, artifact keys, or normalized documents for a cluster.
+      Use `kb_fetch` only after `kb_search` when you need the contents of a specific raw or normalized object by key.
+      Prefer this toolset over live-cluster investigation when the user asks about stored findings, artifact keys, hub/spoke results, or SRE RAG knowledge-base contents.
     tools:
       - name: kb_search
         description: Search normalized SRE knowledge base documents in Qdrant
+        user_description: Search SRE knowledge base documents and return matching stored findings or artifact keys
         command: ["python3", "/kb-scripts/kb_tools.py", "search"]
       - name: kb_fetch
         description: Fetch a raw or normalized object from S3 by key
+        user_description: Fetch the contents of a known S3 object key from the SRE knowledge base
         command: ["python3", "/kb-scripts/kb_tools.py", "fetch"]
   kb_tools.py: |
     import json
