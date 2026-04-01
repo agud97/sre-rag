@@ -88,7 +88,12 @@ spec:
                     description: Cluster identifier to search, for example hub or spoke-a
                     type: string
                     required: true
-                command: python3 /kb-scripts/kb_tools.py search '{{ query }}' '{{ limit }}' '{{ cluster_id }}'
+                script: |
+                  QUERY=$(cat <<'EOF'
+                  {{ query }}
+                  EOF
+                  )
+                  python3 /kb-scripts/kb_tools.py search "$QUERY" "{{ limit }}" "{{ cluster_id }}"
               - name: kb_fetch
                 description: Fetch a raw or normalized object from S3 by key
                 user_description: Fetch the contents of a known S3 object key from the SRE knowledge base
@@ -97,7 +102,12 @@ spec:
                     description: Exact S3 object key to fetch from the SRE knowledge base
                     type: string
                     required: true
-                command: python3 /kb-scripts/kb_tools.py fetch '{{ path }}'
+                script: |
+                  PATH_TO_FETCH=$(cat <<'EOF'
+                  {{ path }}
+                  EOF
+                  )
+                  python3 /kb-scripts/kb_tools.py fetch "$PATH_TO_FETCH"
           runbook:
             enabled: true
           bash:
