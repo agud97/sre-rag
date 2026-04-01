@@ -105,11 +105,3 @@ data:
   QDRANT_ENDPOINT: "http://qdrant.qdrant.svc.cluster.local:6333"
   EMBEDDING_ENDPOINT: "http://embedding-svc.sre-system.svc:7997"
   EMBEDDING_QUERY_INSTRUCTION: "Given an SRE or Kubernetes troubleshooting query, retrieve relevant cluster findings, diagnostics, and runbook passages that help answer it."
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: s3-credentials-normalizer
-  namespace: holmesgpt
-type: Opaque
-data: {}
