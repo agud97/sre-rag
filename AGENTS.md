@@ -20,6 +20,9 @@ Hub ArgoCD bootstrap:
 - root app `apps` now points to `https://github.com/agud97/sre-rag.git` path `applications`
 - `applications/apps.yaml` is the bootstrap manifest for that root app
 - automated prune is intentionally disabled there to avoid deleting legacy non-`sre-rag` `Application` resources during cutover
+- legacy platform child apps are split into a separate root app `legacy-platform-apps`
+- `applications/legacy-platform-apps.yaml` points to vendored manifests in `applications-legacy`
+- legacy sources previously coming from `idp-app-v1` are vendored under `legacy-src`
 
 Hub:
 - `applications/hub-sre-rag.yaml`
