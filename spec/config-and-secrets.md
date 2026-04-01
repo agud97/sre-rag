@@ -54,10 +54,11 @@ Required in `holmesgpt/sre-rag-config`:
 - `EMBEDDING_QUERY_INSTRUCTION`
 
 Additional Holmes runtime dependency outside this `ConfigMap`:
-- `MODEL` is currently set in `applications/hub-holmesgpt.yaml` to `minimax-m25`
+- `MODEL` is currently set in `applications/hub-holmesgpt.yaml` to `openai/minimax-m25`
 - `OPENAI_API_BASE` is currently `http://89.111.168.161:32080/v1`
 - `OPENAI_API_KEY` is currently provided directly in `applications/hub-holmesgpt.yaml` as a bearer token for the external LiteLLM endpoint
 - if the external LiteLLM endpoint or its upstream model is unavailable, Open WebUI and Holmes chat fail even when retrieval data is present
+- the live `kb/stack` tool definition for Holmes chat is also set in `applications/hub-holmesgpt.yaml`, not in `base/hub/holmesgpt-toolset/kb-stack-toolset.yaml`
 
 ## Secret Model
 
@@ -66,9 +67,13 @@ Real credentials are not stored in git.
 The repo contains only secret stubs:
 - `s3-credentials` in `sre-exporters`
 - `s3-credentials-normalizer` in `sre-system`
-- `s3-credentials-normalizer` in `holmesgpt`
 
 The current operating model uses the same S3 credential pair in all three places.
+
+Important operational rule:
+- do not store or sync an empty `holmesgpt/s3-credentials-normalizer` stub from git
+- that caused live Holmes rollouts to fail with missing `accessKeyId` / `secretAccessKey`
+- the `holmesgpt` namespace Secret must exist in-cluster as runtime state, but must not be recreated as an empty object by this repo
 
 ## Secret Keys
 

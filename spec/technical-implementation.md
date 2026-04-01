@@ -150,8 +150,22 @@ Role:
 - if no `cluster_id` is provided, the current default is `kb_docs_hub`
 
 Important implementation detail:
-- the mounted `kb-stack-toolset.yaml` must include a top-level `description`
-- without that field Holmes loads the chat service but marks the `kb/stack` toolset invalid for `/api/chat`
+- `base/hub/holmesgpt-toolset/kb-stack-toolset.yaml` is no longer the live source of truth for the Holmes chat toolset definition
+- that ConfigMap now carries `kb_tools.py` and `sre-rag-config`
+- the live `kb/stack` toolset used by Holmes chat is defined in `applications/hub-holmesgpt.yaml` under Helm `toolsets:`
+- Holmes runtime reads the effective custom toolset set from `/etc/holmes/config/custom_toolset.yaml`
+- therefore a mounted helper file under `/app/holmes/plugins/toolsets/` is not sufficient by itself to expose `kb_search` and `kb_fetch` to `/api/chat`
+
+Important troubleshooting detail:
+- the first failure mode was a missing top-level `description`, which caused `Toolset 'kb/stack' is invalid`
+- the second failure mode was subtler: Holmes showed `kb/stack` as `enabled` but with `0 tools`
+- this happened because the mounted helper YAML was not the source Holmes used for chat tool loading on this chart/runtime
+- a later failure mode came from invalid custom-tool syntax: Holmes YAML tools require `command` as a string or `script`, not a list of argv entries
+
+Current working model:
+- `applications/hub-holmesgpt.yaml` defines `kb/stack`, `kb_search`, and `kb_fetch`
+- `kb_search` and `kb_fetch` use Holmes `script` wrappers so multi-word query strings survive shell quoting correctly
+- `base/hub/holmesgpt-toolset/kb-stack-toolset.yaml` mounts only `/kb-scripts/kb_tools.py`
 
 ### Open WebUI Pipe
 
@@ -168,6 +182,8 @@ Important implementation detail:
 - multi-turn context is preserved by forwarding prior Open WebUI messages as `conversation_history`
 - the Pipe itself remains stateless outside the current Open WebUI conversation
 - the Pipe itself is healthy if it can execute and reach Holmes; final chat success still depends on the downstream Holmes LLM provider
+- for the Open WebUI HTTP API, the effective model id is `holmes_sre_agent.holmes_sre_agent`
+- the Open WebUI Pipe can be transport-healthy while Holmes KB tool loading is still broken; validate those layers separately
 
 ## ArgoCD Applications
 
@@ -190,8 +206,8 @@ The table below shows where each ArgoCD application reads its desired state from
 | --- | --- | --- | --- | --- |
 | `hub-sre-rag` | Git | `overlays/hub` | hub exporters plus hub services | overlay-local `cluster-config-exporters.yaml` and `cluster-config-system.yaml` |
 | `sre-rag` | Git | `templates/spoke-exporters` | spoke exporters | requires local `cluster-identity` ConfigMap plus `s3-credentials` |
-| `holmesgpt-configs` | Git | `base/hub/holmesgpt-toolset` | HolmesGPT toolset ConfigMaps and secret stub | provides `kb-stack-toolset`, runbooks, `sre-rag-config`, and `s3-credentials-normalizer` |
-| `holmesgpt` | Helm | chart `holmes` from `https://robusta-charts.storage.googleapis.com`, version `0.19.0` | HolmesGPT deployment | values are embedded in `applications/hub-holmesgpt.yaml`; reads `sre-rag-config`, `s3-credentials-normalizer`, `custom-runbooks`, `sre-runbooks`, `kb-stack-toolset` at runtime |
+| `holmesgpt-configs` | Git | `base/hub/holmesgpt-toolset` | HolmesGPT helper ConfigMaps | provides `kb_tools.py`, runbooks, and `sre-rag-config`; it must not recreate an empty `s3-credentials-normalizer` Secret |
+| `holmesgpt` | Helm | chart `holmes` from `https://robusta-charts.storage.googleapis.com`, version `0.19.0` | HolmesGPT deployment | values are embedded in `applications/hub-holmesgpt.yaml`; defines the live `kb/stack` toolset and reads `sre-rag-config`, `s3-credentials-normalizer`, `custom-runbooks`, `sre-runbooks`, and `kb_tools.py` at runtime |
 | `qdrant` | Helm | chart `qdrant` from `https://qdrant.github.io/qdrant-helm`, version `0.10.1` | Qdrant StatefulSet and service | values are embedded in `applications/hub-qdrant.yaml` |
 | `k8sgpt` | Helm | chart `k8sgpt-operator` from `https://charts.k8sgpt.ai/` | K8sGPT operator | values are embedded in `applications/spoke-common-k8sgpt.yaml` |
 | `k8sgpt-scanner` | Git | `base/k8sgpt-scanner` | `K8sGPT` scanner custom resource | depends on the `k8sgpt` operator app already being present |
@@ -202,7 +218,7 @@ How the Git-backed apps expand:
 - `overlays/hub` also applies `cluster-identity-exporters.yaml` so hub exporters follow the same `cluster-identity` contract as spoke exporters
 - `templates/spoke-exporters` includes `base/exporters` and the shared `cluster-config.yaml`
 - `templates/cluster-identity.yaml` is applied locally in each spoke cluster before the shared apps
-- `base/hub/holmesgpt-toolset` contains the HolmesGPT toolset and supporting ConfigMaps
+- `base/hub/holmesgpt-toolset` contains HolmesGPT helper ConfigMaps
 - `base/k8sgpt-scanner` contains the shared scanner manifest used by spoke apps
 
 Important caveat:
@@ -235,6 +251,18 @@ Known live issues:
 - `embedding-svc` is functional but slow enough that full reindex can stall or exceed operational expectations
 - Holmes `/api/chat` currently depends on the external LiteLLM endpoint `http://89.111.168.161:32080/v1` with model `minimax-m25`
 - if that LiteLLM endpoint or its upstream model returns errors or times out, Open WebUI `Holmes SRE Agent` fails even though direct `kb_tools.py search` still works
+- Holmes `prometheus/metrics` remains unhealthy while the VictoriaMetrics backend is broken; this is outside the SRE-RAG KB path
+
+## Incident Notes: Holmes KB Chat Fix
+
+The KB chat path failed in several distinct ways before stabilizing:
+
+1. `kb/stack` first failed validation because the custom toolset definition lacked a top-level `description`.
+2. After that, Holmes still did not expose `kb_search` because the mounted helper YAML was not the effective source of truth for `/api/chat`.
+3. Once the toolset definition was moved into Helm `toolsets:`, Holmes still rejected the tools because `command` had been defined as a YAML list instead of a Holmes string/script command.
+4. After converting the tools to Holmes-valid definitions and restarting the deployment, `kb_search` and `kb_fetch` appeared in `ToolExecutor.tools_by_name`, and Holmes `/api/chat` switched from `kubectl_*` investigation to actual KB retrieval.
+
+Separately, `holmesgpt-configs` had been syncing an empty `holmesgpt/s3-credentials-normalizer` Secret stub from git. That caused fresh Holmes pods to fail startup after sync. The empty stub was removed from git, and the live Secret is now treated as out-of-band runtime state.
 
 ## Legacy Cutover State
 

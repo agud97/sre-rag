@@ -22,6 +22,10 @@ The Pipe uses that contract directly:
 
 This gives multi-turn chat behavior without a second agent state store.
 
+Operationally important detail:
+- the Open WebUI HTTP/API model id is `holmes_sre_agent.holmes_sre_agent`
+- the short id `holmes_sre_agent` is the function id, not the API model id
+
 ## File
 
 - `open-webui/functions/holmes_sre_agent.py`
@@ -48,6 +52,8 @@ Current live dependency chain:
 
 This means the Pipe can be correctly installed and still fail if the downstream Holmes LLM provider is timing out.
 
+It also means the Pipe can be transport-healthy while Holmes KB tool loading is still broken. Validate those layers separately.
+
 ## What The User Sees
 
 After enablement, the model selector should include:
@@ -65,3 +71,5 @@ Selecting it routes the chat to HolmesGPT.
 - This is intentionally simpler than depending on a separate HolmesGPT session API.
 - The Pipe supports both standard and streaming Open WebUI chat requests.
 - If Holmes returns `500` with a nested upstream timeout, check reachability and health of the external LiteLLM endpoint before changing the Pipe code.
+- If Holmes answers KB questions with `kubectl_*` investigation instead of `kb_search`, the problem is in Holmes tool loading or tool selection, not in the Open WebUI transport path.
+- The current Pipe can append `Executed tools` with `unknown` entries even when the answer itself is correct; this is a formatting issue in the Pipe, not a KB retrieval failure.

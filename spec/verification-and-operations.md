@@ -96,6 +96,24 @@ Expected:
 - search hits with `tool=...`
 - `key=raw/.../spoke-a/...`
 
+Also verify that Holmes chat really exposes KB tools to the LLM:
+
+```bash
+kubectl -n holmesgpt exec deploy/holmesgpt-holmes -- /venv/bin/python - <<'PY'
+from holmes.config import Config
+cfg = Config.load_from_env()
+ai = cfg.create_toolcalling_llm(dal=None, model=None)
+print("kb_search" in ai.tool_executor.tools_by_name)
+print("kb_fetch" in ai.tool_executor.tools_by_name)
+PY
+```
+
+Expected:
+- `True`
+- `True`
+
+If either value is `False`, `kb_tools.py` may still work directly while Holmes `/api/chat` remains broken.
+
 ### 8. Verify The Embedding Model
 
 The embedding service should no longer be a hash-based stub.
@@ -129,6 +147,10 @@ Minimum expectation:
 - Open WebUI shows the Pipe as a model
 - the answer is produced by HolmesGPT rather than the default LLM provider
 - a follow-up turn still makes sense without repeating the whole previous answer
+
+HTTP/API validation detail:
+- the Open WebUI Pipe model id is `holmes_sre_agent.holmes_sre_agent`
+- do not test the HTTP API with just `holmes_sre_agent`
 
 Current stand caveat:
 - Open WebUI can still fail here if HolmesGPT cannot get a completion from the external LiteLLM endpoint
@@ -210,12 +232,21 @@ Typical causes:
 - wrong `cluster_id` parameter
 - data not indexed yet
 - HolmesGPT config drift
+- Holmes loaded `kb/stack` status but not its tools
+- invalid custom tool syntax in the Holmes toolset definition
 
 Check:
 - direct `kb_tools.py search`
 - Qdrant payload presence
 - `holmesgpt-configs` state
-- Holmes logs for `Toolset 'kb/stack' is invalid`; if present, verify that `kb-stack-toolset.yaml` includes a top-level `description`
+- Holmes logs for `Toolset 'kb/stack' is invalid`
+- whether `kb_search` / `kb_fetch` are present in `ToolExecutor.tools_by_name`
+- live `/etc/holmes/config/custom_toolset.yaml` inside the pod
+
+Important runtime note:
+- a valid mounted helper file under `/app/holmes/plugins/toolsets/` does not prove Holmes chat can call the tool
+- the effective Holmes chat tool definition must be visible through `/etc/holmes/config/custom_toolset.yaml`
+- if `kb/stack` shows `enabled` but `0 tools`, Holmes `/api/chat` will still ignore KB retrieval
 
 ### Open WebUI Pipe Fails
 
@@ -225,6 +256,7 @@ Typical causes:
 - imported function code is outdated
 - HolmesGPT itself is unhealthy
 - HolmesGPT chat reaches the external LiteLLM endpoint, but the upstream model returns an error or timeout
+- wrong Open WebUI HTTP model id was used
 
 Check:
 - the function valves in Open WebUI
@@ -232,3 +264,20 @@ Check:
 - `docs/open-webui-holmes-sre-agent.md`
 - direct HolmesGPT `/api/chat` behavior
 - the configured LiteLLM endpoint response to `/v1/chat/completions`
+- the HTTP request uses `model=holmes_sre_agent.holmes_sre_agent`
+
+## Incident Retrospective: Holmes KB Chat
+
+The Holmes KB path failed in multiple layers on the stand:
+
+1. `kb/stack` first failed validation because its custom toolset definition was missing a top-level `description`.
+2. After that, the direct helper script worked, but Holmes chat still did not expose `kb_search` or `kb_fetch`.
+3. Runtime introspection showed `kb/stack` was `enabled` with `0 tools`, which meant the chart/runtime was not using the mounted helper YAML as the effective chat tool definition.
+4. The real fix was to define `kb/stack` in `applications/hub-holmesgpt.yaml` under Helm `toolsets:` so it was rendered into `/etc/holmes/config/custom_toolset.yaml`.
+5. A second runtime validation error then showed Holmes custom YAML tools require `command` as a string or `script`, not a YAML argv list.
+6. After converting the tool definitions to Holmes-valid `script` wrappers and restarting the deployment, Holmes `/api/chat` started issuing real `kb_search` calls and Open WebUI returned KB-backed artifact keys.
+
+Separate operational regression:
+- `holmesgpt-configs` used to sync an empty `holmesgpt/s3-credentials-normalizer` Secret stub from git
+- this broke fresh Holmes pod startup after sync
+- the empty stub was removed from git and the namespace-local Secret is now treated as runtime state

@@ -119,6 +119,7 @@ What happens under the hood:
 
 Current operational note:
 - direct retrieval for `hub` and `spoke-a` is validated
+- the current Open WebUI HTTP model id is `holmes_sre_agent.holmes_sre_agent`
 - if the downstream LiteLLM model path is timing out, the Open WebUI model can fail with a Holmes `500` even when the underlying indexed data is present
 
 Recommended question style in Open WebUI:
@@ -132,6 +133,10 @@ Weak examples:
 - `Search everything`
 
 Those can work poorly because the current toolset does not yet have a dedicated cluster discovery command.
+
+Current KB-chat behavior note:
+- Holmes KB retrieval now works through `/api/chat` and Open WebUI
+- for artifact-key lookup prompts, Holmes should use `kb_search` rather than `kubectl_*` investigation tools
 
 ## How To Interpret Results
 
@@ -154,6 +159,7 @@ If you need the original machine-readable artifact, use `key`.
 - default search without `cluster_id` uses the hub collection
 - repeated results can appear because one artifact can produce multiple indexed points
 - Open WebUI chat depends on HolmesGPT chat, which in turn depends on the external LiteLLM model path at `http://89.111.168.161:32080/v1`; retrieval can be healthy while chat generation is temporarily unavailable
+- the newest exporter artifacts may not appear immediately if the normalizer backlog has not caught up yet
 
 ## What To Report If Something Looks Wrong
 
