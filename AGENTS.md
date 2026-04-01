@@ -16,6 +16,11 @@ Current active architecture:
 
 Active rollout model is `Per-spoke ArgoCD`.
 
+Hub ArgoCD bootstrap:
+- root app `apps` now points to `https://github.com/agud97/sre-rag.git` path `applications`
+- `applications/apps.yaml` is the bootstrap manifest for that root app
+- automated prune is intentionally disabled there to avoid deleting legacy non-`sre-rag` `Application` resources during cutover
+
 Hub:
 - `applications/hub-sre-rag.yaml`
 - `applications/hub-qdrant.yaml`
