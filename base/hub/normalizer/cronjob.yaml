@@ -5,6 +5,7 @@ metadata:
   namespace: sre-system
 spec:
   schedule: "41 * * * *"
+  concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 3
   jobTemplate:

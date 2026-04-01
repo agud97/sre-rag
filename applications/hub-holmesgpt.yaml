@@ -73,8 +73,6 @@ spec:
             enabled: true
             config:
               include_default_allow_deny_list: true
-          kb/stack:
-            enabled: true
         additionalVolumes:
           - name: custom-runbooks
             configMap:
