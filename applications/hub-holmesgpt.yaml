@@ -63,6 +63,9 @@ spec:
             enabled: true
           kubernetes/logs:
             enabled: true
+          kb/stack:
+            enabled: true
+            description: Search and fetch SRE RAG knowledge base documents from Qdrant and S3.
           runbook:
             enabled: true
           bash:
