@@ -192,5 +192,5 @@ git push origin main
 
 - `open-webui/functions/__pycache__/` is untracked local junk
 - spoke legacy overlays can remain for reference, but should not be described as active rollout
-- Holmes `prometheus/metrics` toolset still fails to initialize against VictoriaMetrics
+- Holmes `prometheus/metrics` should stay disabled until the VictoriaMetrics backend is fixed; current `vmsingle` storage is pinned to NotReady node `k8s6005021-az1-md1-5rhzt-477v8`
 - historical failed `normalizer` jobs may still need manual cleanup until the new `concurrencyPolicy: Forbid` cycle ages them out

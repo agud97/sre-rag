@@ -63,10 +63,6 @@ spec:
             enabled: true
           kubernetes/logs:
             enabled: true
-          prometheus/metrics:
-            enabled: true
-            config:
-              prometheus_url: "http://vmsingle-vm-k8s-stack-victoria-metrics-k8s-stack.monitoring.svc:8429"
           runbook:
             enabled: true
           bash:
