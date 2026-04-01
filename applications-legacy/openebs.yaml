@@ -1,0 +1,32 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "openebs",
+    "namespace": "argocd"
+  },
+  "spec": {
+    "destination": {
+      "namespace": "openebs",
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "default",
+    "source": {
+      "chart": "localpv-provisioner",
+      "helm": {
+        "values": "hostpathClass:\n  enabled: true\n  isDefaultClass: true\n  name: openebs-hostpath\n  basePath: /var/openebs/local\ndeviceClass:\n  enabled: false\nlocalpv:\n  image:\n    registry: docker.io/\n    repository: openebs/provisioner-localpv\n    tag: 4.1.0\nhelperPod:\n  image:\n    registry: docker.io/\n    repository: openebs/linux-utils\n    tag: 4.1.0\n"
+      },
+      "repoURL": "https://openebs.github.io/dynamic-localpv-provisioner",
+      "targetRevision": "4.1.0"
+    },
+    "syncPolicy": {
+      "automated": {
+        "prune": true,
+        "selfHeal": true
+      },
+      "syncOptions": [
+        "CreateNamespace=true"
+      ]
+    }
+  }
+}

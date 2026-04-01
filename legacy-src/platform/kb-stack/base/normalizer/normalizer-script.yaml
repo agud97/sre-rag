@@ -1,0 +1,272 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: normalizer-script
+  namespace: kb-system
+data:
+  normalize.py: |
+    import json
+    import os
+    import uuid
+    from datetime import datetime
+
+    import boto3
+    import requests
+
+    REDACT_KEYS = ["token", "password", "secret", "key", "authorization", "cookie"]
+
+    def redact(obj):
+      if isinstance(obj, dict):
+        redacted = {}
+        for k, v in obj.items():
+          if any(rk in k.lower() for rk in REDACT_KEYS):
+            redacted[k] = "REDACTED"
+          else:
+            redacted[k] = redact(v)
+        return redacted
+      if isinstance(obj, list):
+        return [redact(x) for x in obj]
+      return obj
+
+    def extract_embed_text(doc_type, data):
+      """Extract a concise text summary suitable for embedding."""
+      try:
+        if doc_type == "finding_kubescape":
+          # Kubescape JSON: {summaryDetails: {controls: {C-0013: {name, status, ResourceCounters}}}, results: [...]}
+          if isinstance(data, dict):
+            controls = data.get("summaryDetails", {}).get("controls", {})
+            failed = []
+            for ctrl_id, ctrl in controls.items():
+              if ctrl.get("status") == "failed":
+                name = ctrl.get("name", ctrl_id)
+                cnt = ctrl.get("ResourceCounters", {}).get("failedResources", 0)
+                failed.append(f"{name}({cnt} failed)")
+            if failed:
+              return "kubescape security findings: " + ", ".join(failed[:15])
+        elif doc_type == "finding_popeye":
+          # Popeye JSON: {popeye: {sanitizers: [{sanitizer, tally: {error, warning, ok}}]}}
+          if isinstance(data, dict):
+            popeye = data.get("popeye", data)
+            sanitizers = popeye.get("sanitizers", [])
+            parts = ["popeye lint report:"]
+            for s in sanitizers[:15]:
+              name = s.get("sanitizer", "")
+              tally = s.get("tally", {})
+              errors = tally.get("error", 0)
+              warnings = tally.get("warning", 0)
+              if errors or warnings:
+                parts.append(f"{name} errors={errors} warnings={warnings}")
+            return " ".join(parts)[:500]
+        elif doc_type == "topology":
+          # Kubevious: {nodes: [{dn, node, props, alerts}]}
+          if isinstance(data, dict):
+            nodes = data.get("nodes", [])
+            dns = [n.get("dn", "") for n in nodes[:20] if n.get("dn")]
+            return "kubevious topology: " + " | ".join(dns)[:500]
+      except Exception:
+        pass
+      # Fallback: truncated JSON
+      try:
+        return json.dumps(data)[:500]
+      except Exception:
+        return str(data)[:500]
+
+    def get_embeddings_batch(texts, endpoint):
+      """Call embedding service. Returns list of vectors or None on failure."""
+      try:
+        resp = requests.post(
+          f"{endpoint}/v1/embeddings",
+          json={"input": texts, "model": "all-MiniLM-L6-v2"},
+          timeout=60,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return [item["embedding"] for item in sorted(data["data"], key=lambda x: x["index"])]
+      except Exception as e:
+        print(f"WARNING: embedding batch failed: {e}", flush=True)
+        return None
+
+    def qdrant_ensure_collection(endpoint, collection, vector_size):
+      """Ensure Qdrant collection exists with correct vector size. Recreate if wrong size."""
+      url = f"{endpoint}/collections/{collection}"
+      r = requests.get(url, timeout=10)
+      if r.status_code == 200:
+        info = r.json()
+        existing_size = (
+          info.get("result", {})
+              .get("config", {})
+              .get("params", {})
+              .get("vectors", {})
+              .get("size", 0)
+        )
+        if existing_size == vector_size:
+          print(f"Collection {collection} OK (size={vector_size})", flush=True)
+          return
+        print(f"Collection {collection} has wrong vector size {existing_size} != {vector_size}. Recreating.", flush=True)
+        requests.delete(url, timeout=10).raise_for_status()
+      requests.put(
+        url,
+        json={"vectors": {"size": vector_size, "distance": "Cosine"}},
+        timeout=10,
+      ).raise_for_status()
+      print(f"Created collection {collection} (size={vector_size})", flush=True)
+
+    def qdrant_upsert_batch(endpoint, collection, docs, vectors):
+      points = [
+        {"id": d["id"], "vector": v, "payload": d}
+        for d, v in zip(docs, vectors)
+      ]
+      if points:
+        requests.put(
+          f"{endpoint}/collections/{collection}/points?wait=true",
+          json={"points": points},
+          timeout=60,
+        ).raise_for_status()
+
+    def main():
+      cluster_id = os.environ["CLUSTER_ID"]
+      minio_endpoint = os.environ["MINIO_ENDPOINT"]
+      qdrant_endpoint = os.environ["QDRANT_ENDPOINT"]
+      access_key = os.environ["MINIO_ACCESS_KEY"]
+      secret_key = os.environ["MINIO_SECRET_KEY"]
+      embedding_endpoint = os.environ.get("EMBEDDING_ENDPOINT", "").strip()
+
+      s3 = boto3.client(
+        "s3",
+        endpoint_url=minio_endpoint,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name="us-east-1",
+      )
+
+      ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+      docs_path = f"normalized/docs/{cluster_id}/{ts}/docs.jsonl"
+      nodes_path = f"normalized/graph/{cluster_id}/{ts}/nodes.jsonl"
+      edges_path = f"normalized/graph/{cluster_id}/{ts}/edges.jsonl"
+      bundle_path = f"bundles/{cluster_id}/{ts}/bundle.json"
+
+      docs = []
+      paginator = s3.get_paginator("list_objects_v2")
+      for page in paginator.paginate(Bucket="kb-artifacts", Prefix="raw/"):
+        for obj in page.get("Contents", []):
+          key = obj["Key"]
+          if f"/{cluster_id}/" not in key:
+            continue
+          body = s3.get_object(Bucket="kb-artifacts", Key=key)["Body"].read()
+          try:
+            data = json.loads(body)
+          except Exception:
+            data = {"raw": body.decode("utf-8", errors="ignore")}
+          data = redact(data)
+
+          if key.startswith("raw/k8sgpt/"):
+            items = data.get("items", []) if isinstance(data, dict) else []
+            for item in items:
+              spec = item.get("spec", {})
+              meta = item.get("metadata", {})
+              kind = spec.get("kind", "unknown")
+              res_name = spec.get("name", meta.get("name", "unknown"))
+              errors = spec.get("error", [])
+              if isinstance(errors, list):
+                error_text = "; ".join(
+                  e if isinstance(e, str) else e.get("text", str(e)) for e in errors
+                )
+              else:
+                error_text = str(errors)
+              docs.append({
+                "id": str(uuid.uuid4()),
+                "cluster_id": cluster_id,
+                "timestamp": ts,
+                "doc_type": "finding_k8sgpt",
+                "text": json.dumps(item)[:2000],
+                "embed_text": f"k8sgpt finding: {kind} {res_name} - {error_text}"[:500],
+                "source_path": key,
+              })
+            print(f"k8sgpt: {len(items)} findings from {key}", flush=True)
+            continue
+          elif key.startswith("raw/kubescape/"):
+            doc_type = "finding_kubescape"
+          elif key.startswith("raw/popeye/"):
+            doc_type = "finding_popeye"
+          elif key.startswith("raw/kubevious/"):
+            doc_type = "topology"
+          else:
+            doc_type = "object_card"
+
+          docs.append({
+            "id": str(uuid.uuid4()),
+            "cluster_id": cluster_id,
+            "timestamp": ts,
+            "doc_type": doc_type,
+            "text": json.dumps(data)[:2000],
+            "embed_text": extract_embed_text(doc_type, data),
+            "source_path": key,
+          })
+
+      print(f"Loaded {len(docs)} documents from MinIO", flush=True)
+
+      # Determine embedding parameters
+      vector_size = 384  # all-MiniLM-L6-v2 default
+      vectors = []
+
+      if embedding_endpoint and docs:
+        print(f"Using embedding endpoint: {embedding_endpoint}", flush=True)
+        # Check embedding service health first
+        try:
+          h = requests.get(f"{embedding_endpoint}/health", timeout=10)
+          h.raise_for_status()
+          info = h.json()
+          vector_size = info.get("vector_size", 384)
+          print(f"Embedding service healthy. vector_size={vector_size}", flush=True)
+        except Exception as e:
+          print(f"WARNING: embedding service not healthy: {e}. Using placeholder vectors.", flush=True)
+          embedding_endpoint = ""
+
+      if embedding_endpoint and docs:
+        embed_texts = [d["embed_text"] for d in docs]
+        BATCH = 32
+        for i in range(0, len(embed_texts), BATCH):
+          batch = embed_texts[i : i + BATCH]
+          result = get_embeddings_batch(batch, embedding_endpoint)
+          if result is None:
+            vectors.extend([[0.0] * vector_size] * len(batch))
+          else:
+            vectors.extend(result)
+          print(f"  Embedded {min(i + BATCH, len(embed_texts))}/{len(embed_texts)}", flush=True)
+      else:
+        if not embedding_endpoint:
+          print("WARNING: EMBEDDING_ENDPOINT not set — using placeholder vectors", flush=True)
+        vectors = [[0.0] * vector_size] * len(docs)
+
+      # Save normalized data to MinIO
+      docs_jsonl = "\n".join(json.dumps(d) for d in docs) + ("\n" if docs else "")
+      s3.put_object(Bucket="kb-artifacts", Key=docs_path, Body=docs_jsonl.encode("utf-8"))
+      s3.put_object(Bucket="kb-artifacts", Key=nodes_path, Body=b"")
+      s3.put_object(Bucket="kb-artifacts", Key=edges_path, Body=b"")
+      bundle = {
+        "cluster_id": cluster_id,
+        "timestamp": ts,
+        "docs": docs_path,
+        "nodes": nodes_path,
+        "edges": edges_path,
+      }
+      s3.put_object(Bucket="kb-artifacts", Key=bundle_path, Body=json.dumps(bundle).encode("utf-8"))
+      print(f"Saved normalized data: {len(docs)} docs → {docs_path}", flush=True)
+
+      # Upsert to Qdrant
+      collection = f"kb_docs_{cluster_id}"
+      qdrant_ensure_collection(qdrant_endpoint, collection, vector_size)
+
+      QDRANT_BATCH = 100
+      for i in range(0, len(docs), QDRANT_BATCH):
+        qdrant_upsert_batch(
+          qdrant_endpoint, collection,
+          docs[i : i + QDRANT_BATCH],
+          vectors[i : i + QDRANT_BATCH],
+        )
+        print(f"  Upserted {min(i + QDRANT_BATCH, len(docs))}/{len(docs)} to Qdrant", flush=True)
+
+      print(f"Done. collection={collection} points={len(docs)} vector_size={vector_size}", flush=True)
+
+    if __name__ == "__main__":
+      main()

@@ -1,0 +1,32 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "victoria-logs",
+    "namespace": "argocd"
+  },
+  "spec": {
+    "destination": {
+      "namespace": "victorialogs",
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "default",
+    "source": {
+      "chart": "victoria-logs-single",
+      "helm": {
+        "values": "server:\n  retentionPeriod: 30d\n  persistentVolume:\n    enabled: true\n    storageClass: openebs-hostpath\n    size: 50Gi\n  resources:\n    requests:\n      cpu: 100m\n      memory: 256Mi\n    limits:\n      memory: 1Gi\n  extraVolumes:\n    - name: cold-storage\n      persistentVolumeClaim:\n        claimName: vlogs-cold-storage\n  extraVolumeMounts:\n    - name: cold-storage\n      mountPath: /vlogs-cold\n"
+      },
+      "repoURL": "https://victoriametrics.github.io/helm-charts",
+      "targetRevision": "0.11.26"
+    },
+    "syncPolicy": {
+      "automated": {
+        "prune": true,
+        "selfHeal": true
+      },
+      "syncOptions": [
+        "CreateNamespace=true"
+      ]
+    }
+  }
+}

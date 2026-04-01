@@ -1,0 +1,26 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "developer-apps",
+    "namespace": "argocd"
+  },
+  "spec": {
+    "destination": {
+      "namespace": "default",
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "default",
+    "source": {
+      "path": "legacy-src/developer-apps",
+      "repoURL": "https://github.com/agud97/sre-rag.git",
+      "targetRevision": "HEAD"
+    },
+    "syncPolicy": {
+      "automated": {
+        "prune": true,
+        "selfHeal": true
+      }
+    }
+  }
+}

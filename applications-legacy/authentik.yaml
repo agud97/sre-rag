@@ -1,0 +1,32 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "authentik",
+    "namespace": "argocd"
+  },
+  "spec": {
+    "destination": {
+      "namespace": "authentik",
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "default",
+    "source": {
+      "path": "legacy-src/platform/authentik",
+      "repoURL": "https://github.com/agud97/sre-rag.git",
+      "targetRevision": "HEAD",
+      "kustomize": {
+        "buildOptions": "--enable-helm"
+      }
+    },
+    "syncPolicy": {
+      "automated": {
+        "prune": true,
+        "selfHeal": true
+      },
+      "syncOptions": [
+        "CreateNamespace=true"
+      ]
+    }
+  }
+}

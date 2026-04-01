@@ -1,0 +1,29 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "crossplane-idp",
+    "namespace": "argocd"
+  },
+  "spec": {
+    "destination": {
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "default",
+    "source": {
+      "directory": {
+        "jsonnet": {},
+        "recurse": true
+      },
+      "path": "legacy-src/crossplane/idp",
+      "repoURL": "https://github.com/agud97/sre-rag.git",
+      "targetRevision": "HEAD"
+    },
+    "syncPolicy": {
+      "automated": {
+        "prune": true,
+        "selfHeal": true
+      }
+    }
+  }
+}

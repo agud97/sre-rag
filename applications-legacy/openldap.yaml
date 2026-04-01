@@ -1,0 +1,32 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "openldap",
+    "namespace": "argocd"
+  },
+  "spec": {
+    "destination": {
+      "namespace": "openldap",
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "default",
+    "source": {
+      "chart": "openldap",
+      "helm": {
+        "values": "replicaCount: 1\nenv:\n  LDAP_DOMAIN: \"runityai.local\"\n  LDAP_ORGANISATION: \"RunityAI\"\n  LDAP_TLS: \"false\"\n  LDAP_REMOVE_CONFIG_AFTER_SETUP: \"true\"\nadminPassword: \"LdapAdmin1234\"\nconfigPassword: \"LdapConfig1234\"\nreplication:\n  enabled: false\nltb-passwd:\n  enabled: false\nphpldapadmin:\n  enabled: false\npersistence:\n  enabled: true\n  size: 1Gi\n  storageClass: openebs-hostpath\ncustomLdifFiles:\n  01-users-groups.ldif: |\n    dn: ou=people,dc=runityai,dc=local\n    objectClass: organizationalUnit\n    ou: people\n\n    dn: ou=groups,dc=runityai,dc=local\n    objectClass: organizationalUnit\n    ou: groups\n\n    dn: uid=admin1,ou=people,dc=runityai,dc=local\n    objectClass: inetOrgPerson\n    objectClass: posixAccount\n    objectClass: shadowAccount\n    uid: admin1\n    cn: admin1\n    sn: admin1\n    uidNumber: 1001\n    gidNumber: 1001\n    homeDirectory: /home/admin1\n    userPassword: {CLEARTEXT}Admin1Pass!\n    mail: admin1@runityai.local\n\n    dn: uid=user1,ou=people,dc=runityai,dc=local\n    objectClass: inetOrgPerson\n    objectClass: posixAccount\n    objectClass: shadowAccount\n    uid: user1\n    cn: user1\n    sn: user1\n    uidNumber: 1002\n    gidNumber: 1002\n    homeDirectory: /home/user1\n    userPassword: {CLEARTEXT}User1Pass!\n    mail: user1@runityai.local\n\n    dn: cn=prod_runityai_admin,ou=groups,dc=runityai,dc=local\n    objectClass: posixGroup\n    objectClass: uidObject\n    cn: prod_runityai_admin\n    uid: prod_runityai_admin\n    gidNumber: 2000\n    memberUid: admin1\n\n    dn: cn=prod_runityai_user,ou=groups,dc=runityai,dc=local\n    objectClass: posixGroup\n    objectClass: uidObject\n    cn: prod_runityai_user\n    uid: prod_runityai_user\n    gidNumber: 2001\n    memberUid: user1\n"
+      },
+      "repoURL": "https://jp-gouin.github.io/helm-openldap/",
+      "targetRevision": "2.0.4"
+    },
+    "syncPolicy": {
+      "automated": {
+        "prune": true,
+        "selfHeal": true
+      },
+      "syncOptions": [
+        "CreateNamespace=true"
+      ]
+    }
+  }
+}

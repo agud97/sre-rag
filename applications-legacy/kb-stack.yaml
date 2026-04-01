@@ -1,0 +1,45 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "kb-stack",
+    "namespace": "argocd"
+  },
+  "spec": {
+    "destination": {
+      "namespace": "kb-system",
+      "server": "https://kubernetes.default.svc"
+    },
+    "ignoreDifferences": [
+      {
+        "group": "",
+        "jsonPointers": [
+          "/data",
+          "/stringData"
+        ],
+        "kind": "Secret",
+        "name": "minio-credentials",
+        "namespace": "kb-system"
+      }
+    ],
+    "project": "default",
+    "source": {
+      "path": "legacy-src/platform/kb-stack/overlays/mvp-cloud",
+      "repoURL": "https://github.com/agud97/sre-rag.git",
+      "targetRevision": "HEAD",
+      "kustomize": {
+        "buildOptions": "--enable-helm"
+      }
+    },
+    "syncPolicy": {
+      "automated": {
+        "prune": true,
+        "selfHeal": true
+      },
+      "syncOptions": [
+        "CreateNamespace=true",
+        "RespectIgnoreDifferences=true"
+      ]
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "open-webui",
+    "namespace": "argocd"
+  },
+  "spec": {
+    "destination": {
+      "namespace": "open-webui",
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "default",
+    "source": {
+      "chart": "open-webui",
+      "helm": {
+        "values": "ollama:\n  enabled: false\nopenaiBaseApiUrls:\n  - http://llm-proxy.llm-proxy.svc.cluster.local:8080/v1\nextraEnvVars:\n  - name: OPENAI_API_KEY\n    value: \"not-needed\"\n  - name: VECTOR_DB\n    value: \"qdrant\"\n  - name: QDRANT_URI\n    value: \"http://qdrant.qdrant.svc.cluster.local:6333\"\n  - name: RAG_EMBEDDING_ENGINE\n    value: \"\"\n  - name: RAG_EMBEDDING_MODEL\n    value: \"sentence-transformers/all-MiniLM-L6-v2\"\n  - name: ENABLE_OAUTH_SIGNUP\n    value: \"true\"\n  - name: OAUTH_PROVIDER_NAME\n    value: \"Authentik\"\n  - name: OPENID_PROVIDER_URL\n    value: \"http://authentik-server.authentik.svc.cluster.local/application/o/openwebui/\"\n  - name: OAUTH_CLIENT_ID\n    value: \"openwebui\"\n  - name: OAUTH_CLIENT_SECRET\n    valueFrom:\n      secretKeyRef:\n        name: open-webui-sso\n        key: OAUTH_CLIENT_SECRET\n  - name: OAUTH_ROLES_CLAIM\n    value: \"groups\"\n  - name: OAUTH_ADMIN_ROLES\n    value: \"prod_runityai_admin\"\n  - name: OAUTH_ALLOWED_ROLES\n    value: \"prod_runityai_admin,prod_runityai_user\"\n  - name: OAUTH_MERGE_ACCOUNTS_BY_EMAIL\n    value: \"true\"\npersistence:\n  enabled: true\n  size: 5Gi\n  storageClass: openebs-hostpath\n"
+      },
+      "repoURL": "https://helm.openwebui.com",
+      "targetRevision": "5.18.0"
+    },
+    "syncPolicy": {
+      "automated": {
+        "prune": true,
+        "selfHeal": true
+      },
+      "syncOptions": [
+        "CreateNamespace=true"
+      ]
+    }
+  }
+}
