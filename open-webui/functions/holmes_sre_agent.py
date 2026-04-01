@@ -87,8 +87,9 @@ class Pipe:
         return (
             "Knowledge-base retrieval rule:\n"
             "For requests about artifact keys, stored findings, hub/spoke cluster results, or knowledge-base contents, "
-            "use the kb/stack toolset first.\n"
-            "Prefer kb_search and kb_fetch over kubectl-based investigation unless the user explicitly asks for live cluster state.\n\n"
+            "use only the kb/stack toolset unless the user explicitly asks for live cluster state.\n"
+            "Use kb_search first, then kb_fetch if you need document contents.\n"
+            "Do not use kubectl-based investigation, prometheus queries, or other live-cluster tools for these knowledge-base lookup requests.\n\n"
             f"{ask}"
         )
 
