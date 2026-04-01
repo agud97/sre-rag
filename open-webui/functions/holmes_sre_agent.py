@@ -64,6 +64,34 @@ class Pipe:
         self.valves = self.Valves()
         self._model_id = "holmes_sre_agent"
 
+    def _kb_hint(self, ask: str) -> str:
+        lowered = ask.lower()
+        kb_markers = (
+            "artifact key",
+            "artifact keys",
+            "s3 key",
+            "source_key",
+            "kubescape artifact",
+            "k8sgpt artifact",
+            "popeye artifact",
+            "hub",
+            "spoke-a",
+            "spoke-b",
+            "qdrant",
+            "knowledge base",
+            "kb ",
+            "raw/",
+        )
+        if not any(marker in lowered for marker in kb_markers):
+            return ask
+        return (
+            "Knowledge-base retrieval rule:\n"
+            "For requests about artifact keys, stored findings, hub/spoke cluster results, or knowledge-base contents, "
+            "use the kb/stack toolset first.\n"
+            "Prefer kb_search and kb_fetch over kubectl-based investigation unless the user explicitly asks for live cluster state.\n\n"
+            f"{ask}"
+        )
+
     def pipes(self):
         return [{"id": self._model_id, "name": self.valves.MODEL_NAME}]
 
@@ -128,6 +156,8 @@ class Pipe:
                 + "\n\nCurrent user request:\n"
                 + ask
             )
+
+        ask = self._kb_hint(ask)
 
         payload = {"ask": ask}
         if history:
