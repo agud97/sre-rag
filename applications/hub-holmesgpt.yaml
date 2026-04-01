@@ -13,7 +13,7 @@ spec:
       values: |
         additionalEnvVars:
           - name: MODEL
-            value: "minimax-m25"
+            value: "openai/minimax-m25"
           - name: OPENAI_API_BASE
             value: "http://89.111.168.161:32080/v1"
           - name: OPENAI_API_KEY
