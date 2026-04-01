@@ -10,6 +10,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
+      backoffLimit: 1
       template:
         spec:
           tolerations:
@@ -20,6 +21,14 @@ spec:
           containers:
             - name: normalizer
               image: python:3.11-slim
+              resources:
+                requests:
+                  cpu: "250m"
+                  memory: "512Mi"
+                  ephemeral-storage: "1Gi"
+                limits:
+                  memory: "1Gi"
+                  ephemeral-storage: "2Gi"
               command:
                 - /bin/sh
                 - -c
