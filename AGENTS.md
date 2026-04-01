@@ -20,6 +20,7 @@ Hub ArgoCD bootstrap:
 - root app `apps` now points to `https://github.com/agud97/sre-rag.git` path `applications`
 - `applications/apps.yaml` is the bootstrap manifest for that root app
 - automated prune is intentionally disabled there to avoid deleting legacy non-`sre-rag` `Application` resources during cutover
+- on hub, root app must exclude `applications/spoke-common-sre-rag.yaml`, otherwise it creates a duplicate child app `sre-rag` that conflicts with `hub-sre-rag` over exporter resources
 
 Hub:
 - `applications/hub-sre-rag.yaml`
@@ -115,20 +116,21 @@ Without it:
 This was fixed in:
 - `base/hub/holmesgpt-toolset/kb-stack-toolset.yaml`
 
-### 4. Current Chat Blocker Is External LLM Availability
+### 4. Holmes Chat Was Fixed To Use External LiteLLM
 
 Current Holmes model config:
-- `MODEL=minimax-m25`
+- `MODEL=openai/minimax-m25`
 - `OPENAI_API_BASE=http://89.111.168.161:32080/v1`
 
-Observed live failure:
-- Holmes `/api/chat` reaches the external LiteLLM endpoint
-- the external LiteLLM endpoint or its upstream model can still fail independently of retrieval
-- Open WebUI `Holmes SRE Agent` therefore fails even when retrieval data is healthy
+Confirmed live behavior:
+- direct `POST /api/chat` on Holmes returns `200`
+- Holmes startup no longer logs `Toolset 'kb/stack' is invalid`
+- Holmes logs show `Loaded models: ['openai/minimax-m25']`
+- Holmes can call LiteLLM successfully when the endpoint is reachable
 
 Meaning:
-- retrieval path can be healthy
-- chat path can still fail independently
+- retrieval and chat are now independently confirmed healthy
+- if Open WebUI still fails, debug the Pipe layer separately from Holmes
 
 ## Useful Verification Commands
 
@@ -190,4 +192,5 @@ git push origin main
 
 - `open-webui/functions/__pycache__/` is untracked local junk
 - spoke legacy overlays can remain for reference, but should not be described as active rollout
-- if Holmes chat is required, verify the external LiteLLM endpoint and its upstream model before debugging Open WebUI again
+- Holmes `prometheus/metrics` toolset still fails to initialize against VictoriaMetrics
+- historical failed `normalizer` jobs may still need manual cleanup until the new `concurrencyPolicy: Forbid` cycle ages them out

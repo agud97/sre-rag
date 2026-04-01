@@ -13,7 +13,7 @@ spec:
     path: applications
     directory:
       recurse: true
-      exclude: apps.yaml
+      exclude: '{apps.yaml,spoke-common-sre-rag.yaml}'
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
